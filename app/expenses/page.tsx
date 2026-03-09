@@ -10,10 +10,10 @@ import DailySpendGraph from "@/components/DailySpendGraph";
 import AgentBreakdown from "@/components/AgentBreakdown";
 import ModelBreakdown from "@/components/ModelBreakdown";
 import MtdExpenseCard from "@/components/MtdExpenseCard";
+import ProgressGuardrailsCard from "@/components/ProgressGuardrailsCard";
 import StatusBadge from "@/components/StatusBadge";
 import { useExpenses } from "@/hooks/useExpenses";
 import type { ExpenseSummaryApiPayload } from "@/types/expenses";
-import { Activity } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -26,6 +26,7 @@ import {
 } from "recharts";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const YEAR_OPTIONS = [2026, 2027, 2028, 2029, 2030];
 const YTD_BAR_GRADIENT_ID = "ytdMonthlyBarGradient";
 const YTD_BAR_RED_GRADIENT_ID = "ytdMonthlyBarRedGradient";
 const USD_EXCHANGE_RATE = 33;
@@ -181,33 +182,7 @@ export default function ExpensesPage() {
   const ytdStatus = getUsageStatus(usagePct);
 
   const monthlyBudget = 1500;
-  const summaryMonth = expensesHook.summary?.month;
-  const [summaryYear, summaryMonthIndex] = summaryMonth?.split("-") ?? [
-    String(currentYear),
-    String(currentMonth).padStart(2, "0"),
-  ];
-  const parsedYear = Number(summaryYear);
-  const parsedMonth = Number(summaryMonthIndex);
-  const daysInMonth = new Date(parsedYear, parsedMonth, 0).getDate();
-  const isCurrentMonth = parsedYear === currentYear && parsedMonth === currentMonth;
-  const daysElapsed = isCurrentMonth ? today.getDate() : daysInMonth;
-  const dailyBudget = monthlyBudget / daysInMonth;
-  const targetAccumulated = dailyBudget * daysElapsed;
   const actualSpent = expensesHook.summary?.totalExpense ?? 0;
-  const paceDiff = actualSpent - targetAccumulated;
-
-  const paceStatus =
-    paceDiff <= 0
-      ? { emoji: "🟢", label: "on pace" }
-      : paceDiff <= dailyBudget
-        ? { emoji: "🟡", label: "slightly over" }
-        : { emoji: "🔴", label: "significantly over" };
-
-  const targetUsd = targetAccumulated / USD_EXCHANGE_RATE;
-  const actualUsd = actualSpent / USD_EXCHANGE_RATE;
-  const paceDiffLabel = `${paceDiff >= 0 ? "+" : "-"}${formatTHB(Math.abs(paceDiff))}`;
-  const targetPct = Math.min((targetAccumulated / monthlyBudget) * 100, 100);
-  const actualPct = Math.min((actualSpent / monthlyBudget) * 100, 100);
 
   return (
     <AppShell
@@ -219,23 +194,25 @@ export default function ExpensesPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <div className="border border-border rounded-2xl bg-[#0f0f0f] p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-white">YTD Total Expense</h3>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={2026}
-                  max={2030}
-                  step={1}
-                  value={selectedYear}
-                  onChange={(event) => {
-                    const nextYear = Number(event.target.value);
-                    if (Number.isNaN(nextYear)) return;
-                    setSelectedYear(clampYear(nextYear));
-                  }}
-                  className="w-24 rounded-lg border border-white/10 bg-transparent px-3 py-1 text-sm text-white outline-none transition focus:border-accent-cyan/60 focus:ring-2 focus:ring-accent-cyan/40"
-                />
+                <h3 className="text-sm font-semibold text-white">YTD Total Expense</h3>
                 <StatusBadge status={ytdStatus} />
               </div>
+              <select
+                value={selectedYear}
+                onChange={(event) => {
+                  const nextYear = Number(event.target.value);
+                  if (Number.isNaN(nextYear)) return;
+                  setSelectedYear(clampYear(nextYear));
+                }}
+                className="min-w-[5.5rem] bg-[#1a1a1a] border border-border rounded px-3 py-1.5 text-xs font-mono text-white hover:border-accent-green focus:border-accent-green focus:outline-none cursor-pointer transition"
+              >
+                {YEAR_OPTIONS.map((yearOption) => (
+                  <option key={yearOption} value={yearOption} className="bg-[#0f0f0f] text-white">
+                    {yearOption}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="text-4xl font-semibold text-white">
               {ytdTotals.loading ? (
@@ -251,7 +228,7 @@ export default function ExpensesPage() {
                 <>({formatUSD(ytdUsd)})</>
               )}
             </div>
-            <div className="text-sm text-gray-400 mt-2">
+            <div className="text-[10px] text-gray-500 mt-2">
               {ytdTotals.loading ? (
                 <div className="h-4 w-48 animate-pulse rounded bg-[#1a1a1a]" />
               ) : (
@@ -365,39 +342,7 @@ export default function ExpensesPage() {
             setMonth={expensesHook.setMonth}
           />
 
-          <div className="rounded-2xl border border-border/80 bg-[#0f0f0f] p-5 shadow-[0_0_24px_rgba(0,0,0,0.2)]">
-            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
-              <Activity size={16} className="text-accent-amber" />
-              Budget Pace
-            </div>
-            <p className="mt-1 text-[11px] text-gray-500">Monthly budget ฿1,500</p>
-            <div className="mt-4 space-y-3 text-sm text-gray-300">
-              <div>
-                <p className="text-lg font-semibold text-white">{formatTHB(actualSpent)} spent</p>
-                <p className="text-xs text-gray-500">({formatUSD(actualUsd)})</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400">Target {formatTHB(targetAccumulated)}</p>
-                <p className="text-xs text-gray-500">({formatUSD(targetUsd)})</p>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <span>
-                  {paceStatus.emoji} {paceStatus.label}
-                </span>
-                <span>{paceDiffLabel}</span>
-              </div>
-              <div className="relative mt-2 h-3 rounded-full bg-[#1a1a1a]">
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-accent-cyan/40"
-                  style={{ width: `${targetPct}%` }}
-                />
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-accent-amber"
-                  style={{ width: `${actualPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
+          <ProgressGuardrailsCard summary={expensesHook.summary} loading={expensesHook.loading} />
         </div>
 
         <ExpenseOverviewCard
