@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Pulse from "@/components/Pulse";
 import BrainSection from "@/components/BrainSection";
 import FeedSection from "@/components/FeedSection-vertical";
 import StatsSection from "@/components/StatsSection";
 import TodoSection from "@/components/TodoSection-compact";
+import ExpenseSection from "@/components/ExpenseSection";
 
 export default function MissionControl() {
   return (
@@ -26,9 +26,10 @@ export default function MissionControl() {
           <FeedSection />
         </div>
 
-        {/* Right Column - The Stats */}
-        <div className="lg:col-span-3">
+        {/* Right Column - The Stats + Expenses */}
+        <div className="lg:col-span-3 space-y-6">
           <StatsSection />
+          <ExpenseSection />
         </div>
       </div>
     </div>
