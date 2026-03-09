@@ -15,6 +15,7 @@ import { Activity, PieChart, TrendingUp } from "lucide-react";
 import {
   Bar,
   BarChart,
+  Cell,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
@@ -25,6 +26,7 @@ import {
 const YTD_MONTHS = Array.from({ length: 12 }, (_, index) => `2026-${String(index + 1).padStart(2, "0")}`);
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const YTD_BAR_GRADIENT_ID = "ytdMonthlyBarGradient";
+const YTD_BAR_RED_GRADIENT_ID = "ytdMonthlyBarRedGradient";
 const USD_EXCHANGE_RATE = 33;
 
 const formatTHB = (value: number) =>
@@ -218,6 +220,10 @@ export default function ExpensesPage() {
                         <stop offset="0%" stopColor="#34d399" stopOpacity={0.95} />
                         <stop offset="100%" stopColor="#34d399" stopOpacity={0.4} />
                       </linearGradient>
+                      <linearGradient id={YTD_BAR_RED_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="#ef4444" stopOpacity={0.4} />
+                      </linearGradient>
                     </defs>
                     <XAxis
                       dataKey="label"
@@ -254,7 +260,14 @@ export default function ExpensesPage() {
                       fill={`url(#${YTD_BAR_GRADIENT_ID})`}
                       radius={[4, 4, 2, 2]}
                       maxBarSize={16}
-                    />
+                    >
+                      {ytdTotals.monthly.map((entry, index) => (
+                        <Cell
+                          key={`ytd-bar-cell-${entry.month ?? index}`}
+                          fill={`url(#${entry.amount > monthlyBudget ? YTD_BAR_RED_GRADIENT_ID : YTD_BAR_GRADIENT_ID})`}
+                        />
+                      ))}
+                    </Bar>
                     <ReferenceLine
                       y={1500}
                       stroke="#f59e0b"
