@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, Plus, Trash2, RefreshCw, Brain, Code, TrendingUp, Settings, Sparkles, Telescope, Heart, Server } from "lucide-react";
+import { Activity, Plus, Trash2, RefreshCw, Brain, Code, TrendingUp, Settings, Sparkles, Telescope, Heart, Server, GitCommitHorizontal } from "lucide-react";
 
 // Icon map
 const ICON_MAP: Record<string, any> = {
@@ -62,7 +62,7 @@ interface Agent {
 }
 
 export default function FeedSection() {
-  const { events, loading, error, addEvent, deleteAllEvents, agents } =
+  const { events, loading, error, addEvent, deleteAllEvents } =
     useEvents();
   const [agentsList, setAgentsList] = useState<Agent[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -112,6 +112,21 @@ export default function FeedSection() {
     }
   };
 
+  const getConciseEventMessage = (event: (typeof events)[number]) => {
+    const source = event.metadata?.source;
+
+    if (source === "openclaw-subagent-bridge") {
+      const taskResult = typeof event.metadata?.result === "string" ? event.metadata.result : "";
+      const normalizedResult = taskResult.replace(/\s+/g, " ").trim();
+      const [firstSentence] = normalizedResult.split(/(?<=[.!?])\s+/);
+      const concise = firstSentence && firstSentence.length > 0 ? firstSentence : event.message;
+
+      return concise.length > 120 ? `${concise.slice(0, 117)}...` : concise;
+    }
+
+    return event.message;
+  };
+
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString("en-US", {
@@ -121,10 +136,6 @@ export default function FeedSection() {
     });
   };
 
-  // Get agent info
-  const getAgent = (agentName: string): Agent | undefined => {
-    return agentsList.find((a) => a.name === agentName);
-  };
 
   // Filter events by type
   const filteredEvents =
@@ -171,7 +182,7 @@ export default function FeedSection() {
     .filter((name) => filteredEvents.some((e) => e.agent === name));
 
   return (
-    <div className="border border-border rounded-lg p-4 bg-[#0f0f0f] h-[calc(100vh-180px)] flex flex-col">
+    <div className="border border-border rounded-[24px] p-4 bg-[#0f0f0f] min-h-[720px] flex flex-col">
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-3">
@@ -233,7 +244,7 @@ export default function FeedSection() {
       )}
 
       {/* Vertical Swimlanes - Grid 3 Columns with auto-fit rows */}
-      <div className="flex-1 overflow-y-auto mb-4 grid grid-cols-3 gap-4 pr-2" style={{ gridAutoRows: "min-content" }}>
+      <div className="flex-1 overflow-y-auto mb-4 grid grid-cols-1 gap-4 pr-2 2xl:grid-cols-3 xl:grid-cols-2" style={{ gridAutoRows: "min-content" }}>
         {loading && events.length === 0 && (
           <div className="flex items-center justify-center w-full text-gray-500">
             <RefreshCw size={24} className="animate-spin" />
@@ -332,6 +343,8 @@ export default function FeedSection() {
                     const notifSeverity = event.metadata?.severity || "normal";
                     const notifColor = NOTIFICATION_SEVERITY_COLORS[notifSeverity];
                     const notifLabel = NOTIFICATION_SEVERITY_LABELS[notifSeverity];
+                    const commit = event.metadata?.commit;
+                    const area = event.metadata?.area;
                     
                     // Border color
                     const borderColor = isTask ? taskColor : isNotification ? notifColor : undefined;
@@ -374,11 +387,22 @@ export default function FeedSection() {
                             >
                               {event.type}
                             </span>
+                            {commit && (
+                              <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-accent-amber bg-accent-amber/10">
+                                <GitCommitHorizontal size={10} />
+                                {String(commit).slice(0, 7)}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <p className="text-gray-300 break-words">
-                          {event.message}
+                          {getConciseEventMessage(event)}
                         </p>
+                        {area && (
+                          <div className="mt-2 text-[11px] font-mono uppercase tracking-wide text-gray-500">
+                            Area: {area}
+                          </div>
+                        )}
                       </div>
                     );
                   })

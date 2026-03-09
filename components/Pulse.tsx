@@ -54,22 +54,22 @@ export default function Pulse() {
   };
 
   return (
-    <div className="border border-border rounded-lg p-8 bg-gradient-to-br from-[#0f0f0f] to-[#1a1a1a]">
-      <div className="flex items-center justify-between gap-8">
+    <div className="border border-border/80 rounded-[28px] p-6 sm:p-8 bg-gradient-to-br from-[#0f0f0f] to-[#1a1a1a] shadow-[0_0_40px_rgba(0,255,255,0.04)]">
+      <div className="flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
         {/* Left: Time & Title */}
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
           {/* Clock */}
           <div>
             <div className="text-xs text-gray-500 mb-1 font-mono uppercase tracking-wide">
               {formatDate(currentTime)}
             </div>
-            <div className="text-6xl font-bold font-mono tracking-tight bg-gradient-to-r from-accent-cyan to-accent-magenta bg-clip-text text-transparent">
+            <div className="text-4xl font-bold font-mono tracking-tight bg-gradient-to-r from-accent-cyan to-accent-magenta bg-clip-text text-transparent sm:text-5xl xl:text-6xl">
               {formatTime(currentTime)}
             </div>
           </div>
 
           {/* Divider */}
-          <div className="w-px h-20 bg-gradient-to-b from-transparent via-border to-transparent" />
+          <div className="hidden h-20 w-px bg-gradient-to-b from-transparent via-border to-transparent lg:block" />
 
           {/* Mission Control Title */}
           <div>
@@ -85,7 +85,7 @@ export default function Pulse() {
         </div>
 
         {/* Center: North Star */}
-        <div className="flex-1 text-center px-8">
+        <div className="flex-1 px-0 text-left xl:px-8 xl:text-center">
           <div className="inline-flex items-center gap-2 mb-2">
             <div className="w-1 h-1 rounded-full bg-accent-amber animate-pulse" />
             <div className="text-xs text-accent-amber font-semibold uppercase tracking-widest">
@@ -99,7 +99,7 @@ export default function Pulse() {
         </div>
 
         {/* Right: Status Toggle */}
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col gap-2 xl:items-end">
           <button
             onClick={cycleStatus}
             className="flex items-center gap-3 px-5 py-3 border-2 rounded-xl hover:bg-[#1a1a1a] transition-all hover:scale-105 shadow-lg"
