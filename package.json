@@ -19,11 +19,15 @@
     "typescript"
   ],
   "scripts": {
+    "predev": "rm -rf .next",
     "dev": "next dev",
     "prebuild": "rm -rf .next",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "log:event": "node scripts/log-event.mjs",
+    "bridge:auto": "node scripts/openclaw-event-bridge.mjs --verbose",
+    "bridge:sync": "node scripts/openclaw-event-bridge.mjs --once --verbose"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

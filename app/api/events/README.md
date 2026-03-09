@@ -118,6 +118,28 @@ curl -X POST http://localhost:3000/api/events \
   }'
 ```
 
+### Automatic OpenClaw completion bridge
+
+Mission Control includes a local bridge script for the current OpenClaw workflow:
+
+```bash
+npm run bridge:auto
+```
+
+It watches `~/.openclaw/subagents/runs.json` and forwards finished subagent completions into `/api/events` with `metadata.source = "openclaw-subagent-bridge"` and `metadata.status = "completed"`.
+
+One-shot sync / backfill:
+
+```bash
+npm run bridge:sync
+```
+
+Notes:
+- dedupe state is stored in `data/bridge-state.json`
+- successful completed runs only (`outcome.status = ok`, `endedReason = subagent-complete`)
+- agent name is inferred from run label/session info, so labels like `blueprint-*` appear under `BLUEPRINT`
+- this is intentionally scoped to the current local OpenClaw subagent architecture
+
 ### Webhook Listener (Future)
 
 To receive events from external services, create a webhook route:

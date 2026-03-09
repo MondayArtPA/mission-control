@@ -164,6 +164,42 @@ await fetch('http://localhost:3000/api/events', {
 });
 ```
 
+### Automatic OpenClaw bridge
+
+Mission Control can now auto-ingest completed OpenClaw subagent runs from `~/.openclaw/subagents/runs.json` and post them into the activity feed.
+
+```bash
+# Terminal 1
+npm run dev
+
+# Terminal 2
+npm run bridge:auto
+```
+
+One-shot backfill / sync of already completed runs:
+
+```bash
+npm run bridge:sync
+```
+
+How it works:
+- watches OpenClaw's structured subagent run registry, not chat transcripts
+- only posts runs that finished successfully with `endedReason = subagent-complete`
+- stores dedupe state in `data/bridge-state.json`
+- maps the event agent from the run label/session info (`blueprint-*` → `BLUEPRINT`, etc.)
+- sends events through the existing `/api/events` API, so UI behavior stays unchanged
+
+Optional env vars:
+
+```bash
+MISSION_CONTROL_BASE_URL=http://localhost:3000
+OPENCLAW_SUBAGENT_RUNS_FILE=/Users/Openclaw/.openclaw/subagents/runs.json
+MISSION_CONTROL_BRIDGE_STATE_FILE=/path/to/bridge-state.json
+MISSION_CONTROL_BRIDGE_POLL_MS=5000
+```
+
+Current scope / limitation: this auto bridge is optimized for the current local OpenClaw workflow where delegated work completion is recorded in `runs.json`. Direct conversational replies from MONDAY/BLUEPRINT that are not subagent completions are not auto-posted yet.
+
 ### From Python
 
 ```python
