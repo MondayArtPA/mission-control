@@ -227,17 +227,6 @@ export default function ExpensesPage() {
                       interval={0}
                     />
                     <YAxis hide domain={[0, (dataMax: number) => Math.max(1500, dataMax) * 1.15]} />
-                    <ReferenceLine
-                      y={1500}
-                      stroke="#f59e0b"
-                      strokeDasharray="4 4"
-                      label={{
-                        value: `Monthly Budget: ฿${formattedMonthlyBudgetLabel} ($${monthlyBudgetUsdLabel})`,
-                        position: "right",
-                        fill: "#9ca3af",
-                        fontSize: 11,
-                      }}
-                    />
                     <RechartsTooltip
                       cursor={{ fill: "rgba(52, 211, 153, 0.08)" }}
                       contentStyle={{
@@ -266,9 +255,32 @@ export default function ExpensesPage() {
                       radius={[4, 4, 2, 2]}
                       maxBarSize={16}
                     />
+                    <ReferenceLine
+                      y={1500}
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      strokeOpacity={0.95}
+                      strokeDasharray="4 4"
+                      ifOverflow="extendDomain"
+                      label={{
+                        value: `Monthly Budget: ฿${formattedMonthlyBudgetLabel} ($${monthlyBudgetUsdLabel})`,
+                        position: "right",
+                        fill: "#9ca3af",
+                        fontSize: 11,
+                      }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               )}
+            </div>
+            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+              <div className="flex items-center gap-1.5">
+                <div
+                  className="h-0.5 w-4"
+                  style={{ backgroundColor: "#f59e0b", borderTop: "1px dashed #f59e0b" }}
+                />
+                <span>Monthly Budget: ฿{monthlyBudget.toLocaleString()} (${(monthlyBudget / USD_EXCHANGE_RATE).toFixed(2)})</span>
+              </div>
             </div>
           </div>
 
