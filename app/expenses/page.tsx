@@ -142,6 +142,8 @@ export default function ExpensesPage() {
   }, [expensesHook.summary]);
 
   const monthlyBudget = 1500;
+  const formattedMonthlyBudgetLabel = monthlyBudget.toLocaleString("en-US");
+  const monthlyBudgetUsdLabel = (monthlyBudget / USD_EXCHANGE_RATE).toFixed(2);
   const summaryMonth = expensesHook.summary?.month;
   const today = new Date();
   const [summaryYear, summaryMonthIndex] = summaryMonth?.split("-") ?? [
@@ -228,7 +230,12 @@ export default function ExpensesPage() {
                       y={1500}
                       stroke="#f59e0b"
                       strokeDasharray="4 4"
-                      label={{ value: "Budget ฿1,500", position: "right", fill: "#9ca3af", fontSize: 11 }}
+                      label={{
+                        value: `Monthly Budget: ฿${formattedMonthlyBudgetLabel} ($${monthlyBudgetUsdLabel})`,
+                        position: "right",
+                        fill: "#9ca3af",
+                        fontSize: 11,
+                      }}
                     />
                     <RechartsTooltip
                       cursor={{ fill: "rgba(52, 211, 153, 0.08)" }}
