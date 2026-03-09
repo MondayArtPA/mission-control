@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
+import { TaskStatus } from "@/lib/tasks";
 
 export interface Todo {
   id: string;
   title: string;
-  completed: boolean;
+  status: TaskStatus;
   agent?: string;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string;
+  blockedReason?: string;
 }
 
 interface UseTodosReturn {
@@ -14,7 +17,10 @@ interface UseTodosReturn {
   loading: boolean;
   error: string | null;
   addTodo: (title: string, agent?: string) => Promise<void>;
-  updateTodo: (id: string, updates: Partial<Pick<Todo, "title" | "completed" | "agent">>) => Promise<void>;
+  updateTodo: (
+    id: string,
+    updates: Partial<Pick<Todo, "title" | "status" | "agent" | "blockedReason">>
+  ) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
   deleteAllTodos: () => Promise<void>;
   refreshTodos: () => Promise<void>;
@@ -54,12 +60,8 @@ export function useTodos(): UseTodosReturn {
       });
 
       const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to create todo");
-      }
-
-      setTodos((prev) => [...prev, data.data]);
+      if (!data.success) throw new Error(data.error || "Failed to create todo");
+      setTodos((prev) => [data.data, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       throw err;
@@ -68,15 +70,12 @@ export function useTodos(): UseTodosReturn {
 
   const updateTodo = async (
     id: string,
-    updates: Partial<Pick<Todo, "title" | "completed">>
+    updates: Partial<Pick<Todo, "title" | "status" | "agent" | "blockedReason">>
   ) => {
-    // Optimistic update - update UI immediately
     const previousTodos = [...todos];
     setTodos((prev) =>
       prev.map((todo) =>
-        todo.id === id
-          ? { ...todo, ...updates, updatedAt: new Date().toISOString() }
-          : todo
+        todo.id === id ? { ...todo, ...updates, updatedAt: new Date().toISOString() } : todo
       )
     );
 
@@ -89,17 +88,9 @@ export function useTodos(): UseTodosReturn {
       });
 
       const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to update todo");
-      }
-
-      // Update with server response to ensure consistency
-      setTodos((prev) =>
-        prev.map((todo) => (todo.id === id ? data.data : todo))
-      );
+      if (!data.success) throw new Error(data.error || "Failed to update todo");
+      setTodos((prev) => prev.map((todo) => (todo.id === id ? data.data : todo)));
     } catch (err) {
-      // Revert on error
       setTodos(previousTodos);
       setError(err instanceof Error ? err.message : "Unknown error");
       throw err;
@@ -107,23 +98,15 @@ export function useTodos(): UseTodosReturn {
   };
 
   const deleteTodo = async (id: string) => {
-    // Optimistic update - remove from UI immediately
     const previousTodos = [...todos];
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
 
     try {
       setError(null);
-      const response = await fetch(`/api/todos/${id}`, {
-        method: "DELETE",
-      });
-
+      const response = await fetch(`/api/todos/${id}`, { method: "DELETE" });
       const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to delete todo");
-      }
+      if (!data.success) throw new Error(data.error || "Failed to delete todo");
     } catch (err) {
-      // Revert on error
       setTodos(previousTodos);
       setError(err instanceof Error ? err.message : "Unknown error");
       throw err;
@@ -131,45 +114,24 @@ export function useTodos(): UseTodosReturn {
   };
 
   const deleteAllTodos = async () => {
-    // Optimistic update - clear UI immediately
     const previousTodos = [...todos];
     setTodos([]);
 
     try {
       setError(null);
-      const response = await fetch("/api/todos", {
-        method: "DELETE",
-      });
-
+      const response = await fetch("/api/todos", { method: "DELETE" });
       const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to delete all todos");
-      }
+      if (!data.success) throw new Error(data.error || "Failed to delete all todos");
     } catch (err) {
-      // Revert on error
       setTodos(previousTodos);
       setError(err instanceof Error ? err.message : "Unknown error");
       throw err;
     }
   };
 
-  const refreshTodos = async () => {
-    await fetchTodos();
-  };
-
   useEffect(() => {
     fetchTodos();
   }, []);
 
-  return {
-    todos,
-    loading,
-    error,
-    addTodo,
-    updateTodo,
-    deleteTodo,
-    deleteAllTodos,
-    refreshTodos,
-  };
+  return { todos, loading, error, addTodo, updateTodo, deleteTodo, deleteAllTodos, refreshTodos: fetchTodos };
 }

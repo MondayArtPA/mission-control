@@ -22,7 +22,7 @@ async function ensureDataDir() {
   }
 }
 
-async function readEvents(): Promise<Event[]> {
+export async function readEvents(): Promise<Event[]> {
   try {
     await ensureDataDir();
     const data = await fs.readFile(DATA_FILE, "utf-8");
@@ -32,7 +32,7 @@ async function readEvents(): Promise<Event[]> {
   }
 }
 
-async function writeEvents(events: Event[]): Promise<void> {
+export async function writeEvents(events: Event[]): Promise<void> {
   await ensureDataDir();
   await fs.writeFile(DATA_FILE, JSON.stringify(events, null, 2));
 }

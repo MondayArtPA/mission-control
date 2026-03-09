@@ -231,6 +231,18 @@ function summarizeTask(task, label, agent, resultText) {
   const taskText = normalizeText(task).toLowerCase();
   const labelText = String(label || "").toLowerCase();
 
+  if (labelText.includes("expense-page-review") || taskText.includes("expense page concept") || taskText.includes("what views/sections should be shown")) {
+    return "Reviewed expense dashboard angles";
+  }
+  if (labelText.includes("expense-ui") || taskText.includes("expense ui inside") || taskText.includes("expense dashboard section")) {
+    return "Added expense dashboard section";
+  }
+  if (labelText.includes("sidebar-pages") || taskText.includes("multi-page app with a left sidebar") || taskText.includes("separate expenses into its own page")) {
+    return "Refactored Mission Control into multi-page layout";
+  }
+  if (labelText.includes("auto-all-agents") || taskText.includes("works for all agents") || taskText.includes("expand agent coverage")) {
+    return "Expanded agent auto-bridge coverage";
+  }
   if (labelText.includes("expense") || taskText.includes("expense tracker")) {
     return "Built expense tracker REST API";
   }
@@ -239,15 +251,6 @@ function summarizeTask(task, label, agent, resultText) {
   }
   if (labelText.includes("auto-bridge") || taskText.includes("automatic bridge") || taskText.includes("activity feed receives agent task completion")) {
     return "Extended automatic OpenClaw activity bridge";
-  }
-
-  const resultSentence = firstSentence(resultText, 140)
-    .replace(/^ทำเสร็จแล้ว(?:และ)?/i, "")
-    .replace(/^เสร็จแล้ว/i, "")
-    .replace(/^completed\s+/i, "Completed ")
-    .trim();
-  if (resultSentence && !/^completed task$/i.test(resultSentence)) {
-    return resultSentence;
   }
 
   const taskTitle = titleFromTask(task)

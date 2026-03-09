@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-import { Todo } from "../route";
+import { applyTaskUpdates, validateTaskUpdateInput } from "@/lib/tasks";
+import { readTodos, Todo, writeTodos } from "../route";
 
-const DATA_FILE = path.join(process.cwd(), "data", "todos.json");
-
-async function readTodos(): Promise<Todo[]> {
-  try {
-    const data = await fs.readFile(DATA_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-async function writeTodos(todos: Todo[]): Promise<void> {
-  await fs.writeFile(DATA_FILE, JSON.stringify(todos, null, 2));
-}
-
-// GET /api/todos/[id] - Get single todo
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -36,7 +19,7 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, data: todo });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch todo" },
       { status: 500 }
@@ -44,7 +27,6 @@ export async function GET(
   }
 }
 
-// PUT /api/todos/[id] - Update todo
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -52,7 +34,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, completed } = body;
+    const updates = validateTaskUpdateInput(body);
 
     const todos = await readTodos();
     const todoIndex = todos.findIndex((t) => t.id === id);
@@ -64,26 +46,19 @@ export async function PUT(
       );
     }
 
-    const updatedTodo: Todo = {
-      ...todos[todoIndex],
-      ...(title !== undefined && { title: title.trim() }),
-      ...(completed !== undefined && { completed }),
-      updatedAt: new Date().toISOString(),
-    };
-
+    const updatedTodo: Todo = applyTaskUpdates(todos[todoIndex], updates);
     todos[todoIndex] = updatedTodo;
     await writeTodos(todos);
 
     return NextResponse.json({ success: true, data: updatedTodo });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: "Failed to update todo" },
-      { status: 500 }
+      { success: false, error: error instanceof Error ? error.message : "Failed to update todo" },
+      { status: 400 }
     );
   }
 }
 
-// DELETE /api/todos/[id] - Delete single todo
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -102,7 +77,7 @@ export async function DELETE(
 
     await writeTodos(filteredTodos);
     return NextResponse.json({ success: true, message: "Todo deleted" });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to delete todo" },
       { status: 500 }

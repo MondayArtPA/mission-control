@@ -6,6 +6,7 @@ import BrainSection from "@/components/BrainSection";
 import FeedSection from "@/components/FeedSection-vertical";
 import StatsSection from "@/components/StatsSection";
 import TodoSection from "@/components/TodoSection-compact";
+import ExpenseGraph from "@/components/ExpenseGraph";
 
 export default function MissionControl() {
   return (
@@ -31,6 +32,7 @@ export default function MissionControl() {
             <StatsSection />
           </div>
         </div>
+        <ExpenseGraph />
       </div>
     </AppShell>
   );

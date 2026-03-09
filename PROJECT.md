@@ -300,6 +300,9 @@ curl -X POST http://localhost:3000/api/events \
     "message": "Created slide deck",
     "metadata": {"status": "completed"}
   }'
+
+# or use helper
+npm run log:event -- MONDAY task "Created slide deck" '{"status":"completed"}'
 ```
 
 ### From OpenClaw Sessions

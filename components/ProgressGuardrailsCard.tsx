@@ -83,7 +83,7 @@ const ChartTooltip = ({ active, payload }: TooltipProps<ValueType, NameType>) =>
         </div>
         <div className="flex items-center justify-between gap-6">
           <span className="text-gray-400">Projected</span>
-          <span className="font-semibold text-amber-300">
+          <span className="font-semibold text-purple-300">
             {data.projected !== null ? formatTHB(data.projected) : "—"}
           </span>
         </div>
@@ -102,40 +102,53 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
   const effectiveMonth = month || summary?.month || getCurrentMonth();
   const monthSelectOptions = useMemo(() => buildMonthOptions(effectiveMonth), [effectiveMonth]);
   const projectedUsd = projectedEom / USD_EXCHANGE_RATE;
+  const remaining = Math.max(budget - projectedEom, 0);
+  const remainingUsd = remaining / USD_EXCHANGE_RATE;
+  const projectionPct = budget > 0 ? (projectedEom / budget) * 100 : 0;
 
   const yAxisMax = Math.max(axisMax, budget, alertLine, restrictLine) * 1.05 || budget * 1.1;
   const showSkeleton = loading && !summary;
 
   return (
     <section className="rounded-2xl border border-border bg-[#0f0f0f] p-5">
-      <div className="mb-6 space-y-3">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-white">Progress vs Budget Guardrails</h3>
-            {!showSkeleton && <StatusBadge status={guardrailStatus} className="text-xs" />}
-          </div>
-          <select
-            value={effectiveMonth}
-            onChange={(event) => setMonth(event.target.value)}
-            className="min-w-[7rem] bg-[#1a1a1a] border border-border rounded px-3 py-1.5 text-sm font-mono text-white hover:border-accent-green focus:border-accent-green focus:outline-none cursor-pointer transition"
-          >
-            {monthSelectOptions.map((option) => (
-              <option key={option.value} value={option.value} className="bg-[#0f0f0f] text-white">
-                {option.label}
-              </option>
-            ))}
-          </select>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-white">Progress vs Budget Guardrails</h3>
+          {!showSkeleton && <StatusBadge status={guardrailStatus} />}
         </div>
-        <div>
-          {showSkeleton ? (
-            <div className="h-8 w-48 animate-pulse rounded bg-[#1c1c1c]" />
-          ) : (
-            <ProjectedEomDisplay value={projectedEom} usdValue={projectedUsd} />
-          )}
-        </div>
+        <select
+          value={effectiveMonth}
+          onChange={(event) => setMonth(event.target.value)}
+          className="min-w-[5.5rem] bg-[#1a1a1a] border border-border rounded px-3 py-1.5 text-xs font-mono text-white hover:border-accent-green focus:border-accent-green focus:outline-none cursor-pointer transition"
+        >
+          {monthSelectOptions.map((option) => (
+            <option key={option.value} value={option.value} className="bg-[#0f0f0f] text-white">
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="mt-6 h-64">
+      {showSkeleton ? (
+        <>
+          <div className="h-10 w-32 animate-pulse rounded-lg bg-[#1a1a1a]" />
+          <div className="h-4 w-24 mt-1 animate-pulse rounded bg-[#1a1a1a]" />
+          <div className="h-4 w-48 mt-2 animate-pulse rounded bg-[#1a1a1a]" />
+        </>
+      ) : (
+        <>
+          <div className="flex items-baseline gap-2">
+            <div className="text-4xl font-semibold text-white">{formatTHB(projectedEom)}</div>
+            <span className="text-[10px] text-gray-500">Projected EOM</span>
+          </div>
+          <div className="text-sm text-gray-500 mt-1">({formatUSD(projectedUsd)})</div>
+          <div className="text-[10px] text-gray-500 mt-2">
+            Projection: {projectionPct.toFixed(1)}% of budget
+          </div>
+        </>
+      )}
+
+      <div className="mt-6 h-52">
         {showSkeleton ? (
           <div className="h-full w-full animate-pulse rounded-2xl bg-[#131313]" />
         ) : chartData.length === 0 ? (
@@ -150,14 +163,14 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
                 dataKey="label"
                 tickLine={false}
                 stroke="#666"
-                fontSize={12}
+                fontSize={11}
                 dy={6}
                 minTickGap={12}
               />
               <YAxis
                 stroke="#666"
                 tickLine={false}
-                fontSize={12}
+                fontSize={11}
                 width={48}
                 domain={[0, yAxisMax]}
                 tickFormatter={(value) => `${Math.round(Number(value))}`}
@@ -167,19 +180,19 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
                 y={alertLine}
                 stroke="#facc15"
                 strokeDasharray="4 4"
-                label={{ value: `Alert ฿${alertLine.toLocaleString()}`, fill: "#facc15", position: "right", fontSize: 11 }}
+                label={{ value: "Alt", fill: "#facc15", position: "right", fontSize: 9 }}
               />
               <ReferenceLine
                 y={restrictLine}
                 stroke="#fb923c"
                 strokeDasharray="4 4"
-                label={{ value: `Restrict ฿${restrictLine.toLocaleString()}`, fill: "#fb923c", position: "right", fontSize: 11 }}
+                label={{ value: "Rst", fill: "#fb923c", position: "right", fontSize: 9 }}
               />
               <ReferenceLine
                 y={budget}
                 stroke="#f87171"
                 strokeDasharray="2 6"
-                label={{ value: `Budget ฿${budget.toLocaleString()}`, fill: "#f87171", position: "right", fontSize: 11 }}
+                label={{ value: "Bdgt", fill: "#f87171", position: "right", fontSize: 9 }}
               />
               <Line
                 type="monotone"
@@ -203,7 +216,7 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
                 type="monotone"
                 dataKey="projected"
                 name="Projected"
-                stroke="#fb923c"
+                stroke="#a78bfa"
                 strokeWidth={2}
                 strokeDasharray="6 4"
                 dot={false}
@@ -217,19 +230,9 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
       <div className="mt-4 flex flex-wrap gap-4 text-[10px] text-gray-500">
         <LegendSwatch color="bg-sky-400" label="Daily Actual" />
         <LegendSwatch color="bg-emerald-400" label="Accumulated" />
-        <LegendSwatch color="bg-amber-400" label="Projected" dashed />
+        <LegendSwatch color="bg-purple-400" label="Projected" dashed />
       </div>
     </section>
-  );
-}
-
-function ProjectedEomDisplay({ value, usdValue }: { value: number; usdValue: number }) {
-  return (
-    <div className="flex flex-wrap items-baseline gap-2">
-      <span className="text-sm text-gray-500">Projected EOM:</span>
-      <span className="text-2xl font-semibold text-white">{formatTHB(value)}</span>
-      <span className="text-sm text-gray-500">({formatUSD(usdValue)})</span>
-    </div>
   );
 }
 
@@ -266,7 +269,7 @@ function LegendSwatch({ color, label, dashed }: { color: string; label: string; 
   return (
     <div className="flex items-center gap-2">
       {dashed ? (
-        <span className="w-6" style={{ borderTop: "2px dashed rgba(251, 146, 60, 0.8)" }} />
+        <span className="w-6" style={{ borderTop: "2px dashed rgba(167, 139, 250, 0.8)" }} />
       ) : (
         <span className={`h-1.5 w-6 rounded-full ${color}`} />
       )}
@@ -404,42 +407,40 @@ function buildProjection(points: ProjectionPoint[], totalDays: number): Projecti
   };
 }
 
-function resolveStatus(value: number, alertLine: number, restrictLine: number, budget: number) {
+function resolveStatus(value: number, alertLine: number, restrictLine: number, budget: number): string {
   if (value <= alertLine) {
-    return {
-      emoji: "🟢",
-      label: "On track",
-      helper: "Projected below alert threshold",
-      pillClass: "bg-emerald-500/10 text-emerald-300 border border-emerald-400/30",
-    };
+    return "normal";
   }
 
   if (value <= restrictLine) {
-    return {
-      emoji: "🟡",
-      label: "Caution",
-      helper: "Projected between alert and restrict",
-      pillClass: "bg-amber-500/10 text-amber-300 border border-amber-400/30",
-    };
+    return "alert";
   }
 
   if (value <= budget) {
-    return {
-      emoji: "🟡",
-      label: "Near limit",
-      helper: "Projected under budget but above restrict",
-      pillClass: "bg-amber-500/10 text-amber-300 border border-amber-400/30",
-    };
+    return "restrict";
   }
 
-  return {
-    emoji: "🔴",
-    label: "Over budget",
-    helper: "Projection exceeds budget",
-    pillClass: "bg-red-500/10 text-red-300 border border-red-400/30",
-  };
+  return "over";
 }
 
 function roundCurrency(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function getCurrentMonth(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function buildMonthOptions(currentValue: string) {
+  const options = [];
+  for (let year = MONTH_START_YEAR; year <= MONTH_END_YEAR; year++) {
+    for (let month = 1; month <= 12; month++) {
+      const value = `${year}-${String(month).padStart(2, "0")}`;
+      options.push({ value, label: `${MONTH_LABELS[month - 1]} ${year}` });
+    }
+  }
+  return options;
 }

@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import {
+  normalizeTaskRecord,
+  TaskRecord,
+  validateTaskCreateInput,
+} from "@/lib/tasks";
 
 const DATA_FILE = path.join(process.cwd(), "data", "todos.json");
 
-export interface Todo {
-  id: string;
-  title: string;
-  completed: boolean;
-  agent?: string; // Agent assigned to this todo
-  createdAt: string;
-  updatedAt: string;
-}
+export type Todo = TaskRecord;
 
-// Ensure data directory exists
 async function ensureDataDir() {
   const dataDir = path.dirname(DATA_FILE);
   try {
@@ -23,29 +20,27 @@ async function ensureDataDir() {
   }
 }
 
-// Read todos from file
-async function readTodos(): Promise<Todo[]> {
+export async function readTodos(): Promise<Todo[]> {
   try {
     await ensureDataDir();
     const data = await fs.readFile(DATA_FILE, "utf-8");
-    return JSON.parse(data);
+    return JSON.parse(data).map(normalizeTaskRecord);
   } catch {
     return [];
   }
 }
 
-// Write todos to file
-async function writeTodos(todos: Todo[]): Promise<void> {
+export async function writeTodos(todos: Todo[]): Promise<void> {
   await ensureDataDir();
   await fs.writeFile(DATA_FILE, JSON.stringify(todos, null, 2));
 }
 
-// GET /api/todos - Get all todos
 export async function GET() {
   try {
     const todos = await readTodos();
+    todos.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return NextResponse.json({ success: true, data: todos });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch todos" },
       { status: 500 }
@@ -53,27 +48,22 @@ export async function GET() {
   }
 }
 
-// POST /api/todos - Create new todo
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, agent } = body;
-
-    if (!title || typeof title !== "string") {
-      return NextResponse.json(
-        { success: false, error: "Title is required" },
-        { status: 400 }
-      );
-    }
+    const input = validateTaskCreateInput(body);
+    const now = new Date().toISOString();
 
     const todos = await readTodos();
     const newTodo: Todo = {
       id: Date.now().toString(),
-      title: title.trim(),
-      completed: false,
-      agent: agent || undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      title: input.title,
+      status: input.status,
+      agent: input.agent,
+      blockedReason: input.status === "blocked" ? input.blockedReason : undefined,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: input.status === "completed" ? now : undefined,
     };
 
     todos.push(newTodo);
@@ -82,18 +72,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: newTodo }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: "Failed to create todo" },
-      { status: 500 }
+      { success: false, error: error instanceof Error ? error.message : "Failed to create todo" },
+      { status: 400 }
     );
   }
 }
 
-// DELETE /api/todos - Delete all todos
 export async function DELETE() {
   try {
     await writeTodos([]);
     return NextResponse.json({ success: true, message: "All todos deleted" });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to delete todos" },
       { status: 500 }

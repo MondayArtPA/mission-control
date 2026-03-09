@@ -1,0 +1,45 @@
+
+> @artistuta/mission-control@1.0.0 prebuild
+> rm -rf .next
+
+
+> @artistuta/mission-control@1.0.0 build
+> next build
+
+   ▲ Next.js 15.5.12
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 2.7s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/12) ...
+   Generating static pages (3/12) 
+   Generating static pages (6/12) 
+   Generating static pages (9/12) 
+ ✓ Generating static pages (12/12)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    9.12 kB         116 kB
+├ ○ /_not-found                            998 B         103 kB
+├ ƒ /api/agents                            147 B         102 kB
+├ ƒ /api/events                            147 B         102 kB
+├ ƒ /api/events/[id]                       147 B         102 kB
+├ ƒ /api/events/seed                       147 B         102 kB
+├ ƒ /api/expenses                          147 B         102 kB
+├ ƒ /api/expenses/[id]                     147 B         102 kB
+├ ƒ /api/expenses/examples                 147 B         102 kB
+├ ƒ /api/expenses/summary                  147 B         102 kB
+├ ƒ /api/todos                             147 B         102 kB
+├ ƒ /api/todos/[id]                        147 B         102 kB
+└ ○ /expenses                            4.84 kB         112 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/493-549e27a9538cad60.js         46 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          1.92 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -17,6 +17,32 @@ import type { ExpenseSummaryApiPayload, ExpenseTrendPoint } from "@/types/expens
 
 const USD_EXCHANGE_RATE = 33;
 const BAR_GRADIENT_ID = "mtd-bar-gradient";
+const formatMonthLabel = (value: string) => {
+  const [year, month] = value.split('-');
+  const parsedYear = Number(year);
+  const parsedMonth = Number(month);
+  if (!Number.isFinite(parsedYear) || !Number.isFinite(parsedMonth)) {
+    return value;
+  }
+  return new Date(parsedYear, parsedMonth - 1).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const generateMonthOptions = () => {
+  const options: { value: string; label: string }[] = [];
+  for (let year = 2026; year <= 2030; year++) {
+    for (let month = 1; month <= 12; month++) {
+      const value = `${year}-${String(month).padStart(2, '0')}`;
+      options.push({ value, label: formatMonthLabel(value) });
+    }
+  }
+  return options;
+};
+
+const MONTH_OPTIONS = generateMonthOptions();
+
 
 const formatTHB = (value: number) =>
   `฿${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -78,32 +104,46 @@ export default function MtdExpenseCard({ summary, month, setMonth }: MtdExpenseC
   const status = summary?.metrics?.totals?.status ?? "normal";
   const dailyTrend = summary?.metrics?.trend?.daily ?? [];
   const dailyBudget = monthlyBudget / monthDays;
+  const monthSelectOptions = useMemo(() => {
+    if (MONTH_OPTIONS.some((option) => option.value === effectiveMonth)) {
+      return MONTH_OPTIONS;
+    }
+    return [...MONTH_OPTIONS, { value: effectiveMonth, label: formatMonthLabel(effectiveMonth) }];
+  }, [effectiveMonth]);
 
-  const dailyData = useMemo(() => buildDailyData(effectiveMonth, dailyTrend, monthDays), [effectiveMonth, dailyTrend, monthDays]);
+  const dailyData = useMemo(
+    () => buildDailyData(effectiveMonth, dailyTrend, monthDays),
+    [effectiveMonth, dailyTrend, monthDays],
+  );
   const chartMax = Math.max(...dailyData.map((entry) => entry.total), dailyBudget) * 1.2 || dailyBudget * 1.2;
 
   return (
     <div className="border border-border rounded-2xl bg-[#0f0f0f] p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-white">MTD Expense</h3>
         <div className="flex items-center gap-2">
-          <input
-            type="month"
-            value={effectiveMonth}
-            onChange={(event) => setMonth(event.target.value)}
-            className="rounded-lg border border-white/10 bg-transparent px-3 py-1 text-sm text-white outline-none transition focus:border-accent-cyan/60 focus:ring-2 focus:ring-accent-cyan/40"
-          />
+          <h3 className="text-sm font-semibold text-white">MTD Total Expense</h3>
           <StatusBadge status={status} />
         </div>
+        <select
+          value={effectiveMonth}
+          onChange={(event) => setMonth(event.target.value)}
+          className="min-w-[5.5rem] bg-[#1a1a1a] border border-border rounded px-3 py-1.5 text-xs font-mono text-white hover:border-accent-green focus:border-accent-green focus:outline-none cursor-pointer transition"
+        >
+          {monthSelectOptions.map((option) => (
+            <option key={option.value} value={option.value} className="bg-[#0f0f0f] text-white">
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="text-4xl font-semibold text-white">{formatTHB(totalSpent)}</div>
       <div className="text-sm text-gray-500 mt-1">({formatUSD(totalSpent / USD_EXCHANGE_RATE)})</div>
-      <div className="text-sm text-gray-400 mt-2">
-        Remaining: {formatTHB(remaining)} ({formatUSD(remaining / USD_EXCHANGE_RATE)})
+      <div className="text-[10px] text-gray-500 mt-2">
+        Remaining (Month): {formatTHB(remaining)} ({formatUSD(remaining / USD_EXCHANGE_RATE)})
       </div>
 
-      <div className="mt-6 h-[150px]">
+      <div className="mt-6 h-52">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={dailyData} barCategoryGap={6} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
             <defs>
@@ -112,8 +152,8 @@ export default function MtdExpenseCard({ summary, month, setMonth }: MtdExpenseC
                 <stop offset="100%" stopColor="#34d399" stopOpacity={0.4} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#9ca3af", fontSize: 11 }} interval={0} />
-            <YAxis hide domain={[0, chartMax]} />
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#9ca3af", fontSize: 11 }} minTickGap={8} />
+            <YAxis hide width={48} domain={[0, chartMax]} />
             <RechartsTooltip
               cursor={{ fill: "rgba(52, 211, 153, 0.08)" }}
               contentStyle={{

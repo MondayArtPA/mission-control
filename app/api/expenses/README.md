@@ -63,7 +63,7 @@ DELETE /api/expenses/:id
 DELETE /api/expenses
 ```
 
-### Monthly Summary
+### Monthly Summary (Mission Control metrics)
 
 ```http
 GET /api/expenses/summary?month=2026-03
@@ -75,22 +75,69 @@ GET /api/expenses/summary?month=2026-03
   "success": true,
   "data": {
     "month": "2026-03",
-    "totalExpense": 1770.5,
-    "count": 3,
+    "totalExpense": 476.5,
+    "count": 9,
     "categoryBreakdown": [
       {
-        "category": "Food",
-        "total": 1200.5,
+        "category": "analysis",
+        "total": 112.15,
         "count": 2
-      },
-      {
-        "category": "Transport",
-        "total": 570,
-        "count": 1
       }
-    ]
+    ],
+    "breakdown": {
+      "byAgent": [
+        { "key": "MONDAY", "total": 228.1, "count": 4 }
+      ],
+      "byCategory": [],
+      "byModel": []
+    },
+    "metrics": {
+      "currency": "THB",
+      "totals": {
+        "budget": 1500,
+        "alertThreshold": 1200,
+        "restrictThreshold": 1395,
+        "spent": 476.5,
+        "remaining": 1023.5,
+        "usagePct": 31.8,
+        "status": "normal"
+      },
+      "counts": {
+        "entries": 9,
+        "daysWithSpend": 5,
+        "filesScanned": 1,
+        "ignoredEntries": 0
+      },
+      "trend": {
+        "daily": [
+          { "date": "2026-03-09", "total": 476.5, "cumulative": 476.5 }
+        ]
+      },
+      "logs": {
+        "daysProcessed": ["2026-03-09"],
+        "missingDays": ["2026-03-01"]
+      },
+      "breakdown": {
+        "byAgent": [
+          { "key": "MONDAY", "total": 228.1, "count": 4, "percent": 47.9 }
+        ],
+        "byCategory": [
+          { "key": "analysis", "total": 112.15, "count": 2, "percent": 23.5 }
+        ],
+        "byModel": [
+          { "key": "Claude 3.5 Sonnet", "total": 91, "count": 2, "percent": 19.1 }
+        ]
+      }
+    }
   }
 }
+```
+
+### Mission Control Breakdowns
+
+```http
+GET /api/expenses/by-agent?month=2026-03
+GET /api/expenses/by-model?month=2026-03
 ```
 
 ### Request Examples

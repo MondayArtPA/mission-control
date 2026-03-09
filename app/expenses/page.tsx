@@ -236,7 +236,7 @@ export default function ExpensesPage() {
               )}
             </div>
             {ytdTotals.error && <p className="mt-3 text-xs text-red-400">{ytdTotals.error}</p>}
-            <div className="mt-6 h-[150px]">
+            <div className="mt-6 h-52">
               {ytdTotals.loading ? (
                 <div className="h-full w-full animate-pulse rounded-2xl bg-[#131313]" />
               ) : ytdTotals.error ? (
@@ -263,7 +263,7 @@ export default function ExpensesPage() {
                       tick={{ fill: "#9ca3af", fontSize: 11 }}
                       interval={0}
                     />
-                    <YAxis hide domain={[0, (dataMax: number) => Math.max(1500, dataMax) * 1.15]} />
+                    <YAxis hide width={48} domain={[0, (dataMax: number) => Math.max(1500, dataMax) * 1.15]} />
                     <RechartsTooltip
                       cursor={{ fill: "rgba(52, 211, 153, 0.08)" }}
                       contentStyle={{
@@ -342,7 +342,12 @@ export default function ExpensesPage() {
             setMonth={expensesHook.setMonth}
           />
 
-          <ProgressGuardrailsCard summary={expensesHook.summary} loading={expensesHook.loading} />
+          <ProgressGuardrailsCard 
+            summary={expensesHook.summary} 
+            loading={expensesHook.loading}
+            month={expensesHook.month}
+            setMonth={expensesHook.setMonth}
+          />
         </div>
 
         <ExpenseOverviewCard
