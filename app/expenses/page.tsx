@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AppShell from "@/components/AppShell";
 import ExpenseSection from "@/components/ExpenseSection";
+import ExpenseCalculationInfo from "@/components/ExpenseCalculationInfo";
 import ExpenseOverviewCard from "@/components/ExpenseOverviewCard";
 import DailySpendGraph from "@/components/DailySpendGraph";
 import AgentBreakdown from "@/components/AgentBreakdown";
@@ -225,7 +226,7 @@ export default function ExpensesPage() {
                       tick={{ fill: "#9ca3af", fontSize: 11 }}
                       interval={0}
                     />
-                    <YAxis hide domain={[0, (dataMax: number) => (dataMax === 0 ? 1000 : dataMax * 1.15)]} />
+                    <YAxis hide domain={[0, (dataMax: number) => Math.max(1500, dataMax) * 1.15]} />
                     <ReferenceLine
                       y={1500}
                       stroke="#f59e0b"
@@ -373,6 +374,10 @@ export default function ExpensesPage() {
         </div>
 
         <ExpenseSection {...expensesHook} />
+
+        <div className="mt-6">
+          <ExpenseCalculationInfo />
+        </div>
       </div>
     </AppShell>
   );
