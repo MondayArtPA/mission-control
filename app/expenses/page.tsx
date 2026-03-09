@@ -274,8 +274,17 @@ export default function ExpensesPage() {
               )}
             </div>
             <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-500">
-              <svg width="10" height="1" className="flex-shrink-0" aria-hidden>
-                <line x1="0" y1="0.5" x2="10" y2="0.5" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2 1" />
+              <svg width="12" height="2" className="flex-shrink-0" aria-hidden>
+                <line
+                  x1="0"
+                  y1="1"
+                  x2="12"
+                  y2="1"
+                  stroke="#f59e0b"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 2"
+                  strokeLinecap="round"
+                />
               </svg>
               <span>Monthly Budget: ฿{monthlyBudget.toLocaleString()} (${(monthlyBudget / USD_EXCHANGE_RATE).toFixed(2)})</span>
             </div>
