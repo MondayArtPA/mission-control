@@ -226,7 +226,10 @@ export default function ExpensesPage() {
                         fontSize: "0.85rem",
                         fontFamily: "'Space Mono', 'DM Mono', monospace",
                       }}
-                      formatter={(value: number) => [formatTHB(value), ""]}
+                      formatter={(value: number) => {
+                        const usdValue = value / USD_EXCHANGE_RATE;
+                        return [`${formatTHB(value)} (${formatUSD(usdValue)})`, ""];
+                      }}
                       labelFormatter={(label, payload) => {
                         const monthKey = payload?.[0]?.payload?.month ?? label;
                         const shortLabel = payload?.[0]?.payload?.label ?? label;
