@@ -1,0 +1,103 @@
+{
+  "runs": {
+    "run-monday": {
+      "runId": "run-monday",
+      "label": "activity-summary",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-monday",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000001,
+      "task": "Prepare a concise update as MONDAY for Art about today's priorities and next steps.",
+      "frozenResultText": "Created concise priority update for Art with next steps."
+    },
+    "run-blueprint": {
+      "runId": "run-blueprint",
+      "label": "blueprint-ship-api",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-blueprint",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000002,
+      "task": "Build the API and dashboard implementation for Mission Control.",
+      "frozenResultText": "Implemented API endpoints and dashboard updates."
+    },
+    "run-quant": {
+      "runId": "run-quant",
+      "label": "roi-review",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-quant",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000003,
+      "task": "Run ROI and budget analysis for the new investment plan.",
+      "frozenResultText": "Completed ROI analysis with budget scenarios."
+    },
+    "run-swiss": {
+      "runId": "run-swiss",
+      "label": "ops-cleanup",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-swiss",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000004,
+      "task": "Improve workflow automation and organize files for the workspace.",
+      "frozenResultText": "Completed workflow automation cleanup and organized project files."
+    },
+    "run-pixar": {
+      "runId": "run-pixar",
+      "label": "creative-social",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-pixar",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000005,
+      "task": "Create creative social media content and branding directions.",
+      "frozenResultText": "Drafted creative content concepts and branding notes."
+    },
+    "run-hubble": {
+      "runId": "run-hubble",
+      "label": "research-brief",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-hubble",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000006,
+      "task": "Research AI trends and produce an intelligence brief.",
+      "frozenResultText": "Completed research brief on AI trends and market scan."
+    },
+    "run-marcus": {
+      "runId": "run-marcus",
+      "label": "wellness-checkin",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-marcus",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000007,
+      "task": "Prepare a wellness and mindfulness check-in plan.",
+      "frozenResultText": "Completed wellness check-in and mindfulness plan."
+    },
+    "run-system": {
+      "runId": "run-system",
+      "label": "healthcheck-service",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-system",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000008,
+      "task": "Restart gateway service and verify infrastructure healthcheck.",
+      "frozenResultText": "Completed service restart and infrastructure healthcheck."
+    },
+    "run-ambiguous": {
+      "runId": "run-ambiguous",
+      "label": "misc-followup",
+      "requesterSessionKey": "agent:main:main",
+      "childSessionKey": "agent:main:subagent:test-ambiguous",
+      "endedReason": "subagent-complete",
+      "outcome": { "status": "ok" },
+      "endedAt": 1773050000009,
+      "task": "Do the thing.",
+      "frozenResultText": "Done."
+    }
+  }
+}

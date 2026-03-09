@@ -137,7 +137,8 @@ npm run bridge:sync
 Notes:
 - dedupe state is stored in `data/bridge-state.json`
 - successful completed runs only (`outcome.status = ok`, `endedReason = subagent-complete`)
-- agent name is inferred from run label/session info, so labels like `blueprint-*` appear under `BLUEPRINT`
+- agent name is inferred from multiple run signals, so labels like `blueprint-*` still work but task/result text can also attribute `MONDAY`, `QUANT`, `SWISS`, `PIXAR`, `HUBBLE`, `MARCUS`, and `SYSTEM`
+- if a successful run lacks reliable attribution in `runs.json`, it is intentionally posted as `SYSTEM` instead of guessing
 - this is intentionally scoped to the current local OpenClaw subagent architecture
 
 ### Webhook Listener (Future)

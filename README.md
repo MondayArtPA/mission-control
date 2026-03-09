@@ -186,8 +186,12 @@ How it works:
 - watches OpenClaw's structured subagent run registry, not chat transcripts
 - only posts runs that finished successfully with `endedReason = subagent-complete`
 - stores dedupe state in `data/bridge-state.json`
-- maps the event agent from the run label/session info (`blueprint-*` → `BLUEPRINT`, etc.)
+- infers the event agent from multiple signals: label prefix, session keys, task text, and frozen result text
+- covers `MONDAY`, `BLUEPRINT`, `QUANT`, `SWISS`, `PIXAR`, `HUBBLE`, `MARCUS`, and `SYSTEM` when those signals are observable in the current OpenClaw run record
+- falls back to `SYSTEM` when the run does not contain enough trustworthy attribution data
 - sends events through the existing `/api/events` API, so UI behavior stays unchanged
+
+Current observable limitation: the bridge only sees what OpenClaw stores in `runs.json`. Direct top-level replies that never create a subagent run, or runs whose label/task/result never identify an agent, cannot be attributed more specifically than `SYSTEM` automatically.
 
 Optional env vars:
 
@@ -196,6 +200,15 @@ MISSION_CONTROL_BASE_URL=http://localhost:3000
 OPENCLAW_SUBAGENT_RUNS_FILE=/Users/Openclaw/.openclaw/subagents/runs.json
 MISSION_CONTROL_BRIDGE_STATE_FILE=/path/to/bridge-state.json
 MISSION_CONTROL_BRIDGE_POLL_MS=5000
+```
+
+Fixture for manual verification across all agents:
+
+```bash
+node scripts/openclaw-event-bridge.mjs --once \
+  --base-url http://localhost:3000 \
+  --runs-file tests/fixtures/openclaw-bridge-runs.json \
+  --state-file /tmp/mission-control-bridge-state.json
 ```
 
 Current scope / limitation: this auto bridge is optimized for the current local OpenClaw workflow where delegated work completion is recorded in `runs.json`. Direct conversational replies from MONDAY/BLUEPRINT that are not subagent completions are not auto-posted yet.
