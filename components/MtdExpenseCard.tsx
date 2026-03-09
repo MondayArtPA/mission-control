@@ -84,9 +84,9 @@ export default function MtdExpenseCard({ summary, month, setMonth }: MtdExpenseC
 
   return (
     <div className="border border-border rounded-2xl bg-[#0f0f0f] p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-white">MTD Expense</h3>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <input
             type="month"
             value={effectiveMonth}
@@ -97,9 +97,9 @@ export default function MtdExpenseCard({ summary, month, setMonth }: MtdExpenseC
         </div>
       </div>
 
-      <div className="text-3xl font-semibold text-white">{formatTHB(totalSpent)}</div>
-      <div className="text-sm text-gray-500">({formatUSD(totalSpent / USD_EXCHANGE_RATE)})</div>
-      <div className="mt-2 text-sm text-gray-400">
+      <div className="text-4xl font-semibold text-white">{formatTHB(totalSpent)}</div>
+      <div className="text-sm text-gray-500 mt-1">({formatUSD(totalSpent / USD_EXCHANGE_RATE)})</div>
+      <div className="text-sm text-gray-400 mt-2">
         Remaining: {formatTHB(remaining)} ({formatUSD(remaining / USD_EXCHANGE_RATE)})
       </div>
 
@@ -155,7 +155,7 @@ export default function MtdExpenseCard({ summary, month, setMonth }: MtdExpenseC
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-3 flex items-center gap-1 text-[10px] text-gray-500">
+      <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-500">
         <svg width="18" height="2" className="flex-shrink-0" aria-hidden>
           <line x1="0" y1="1" x2="18" y2="1" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 2" strokeLinecap="round" />
         </svg>

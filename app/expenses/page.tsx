@@ -218,7 +218,7 @@ export default function ExpensesPage() {
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="border border-border rounded-2xl bg-[#0f0f0f] p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">YTD Total Expense</h3>
               <div className="flex items-center gap-2">
                 <input
@@ -244,14 +244,14 @@ export default function ExpensesPage() {
                 formatTHB(ytdTotal)
               )}
             </div>
-            <div className="mt-1 text-sm text-gray-500">
+            <div className="text-sm text-gray-500 mt-1">
               {ytdTotals.loading ? (
                 <div className="h-4 w-24 animate-pulse rounded bg-[#1a1a1a]" />
               ) : (
                 <>({formatUSD(ytdUsd)})</>
               )}
             </div>
-            <div className="mt-2 text-sm text-gray-400">
+            <div className="text-sm text-gray-400 mt-2">
               {ytdTotals.loading ? (
                 <div className="h-4 w-48 animate-pulse rounded bg-[#1a1a1a]" />
               ) : (
