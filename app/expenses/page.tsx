@@ -273,14 +273,11 @@ export default function ExpensesPage() {
                 </ResponsiveContainer>
               )}
             </div>
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-              <div className="flex items-center gap-1.5">
-                <div
-                  className="h-0.5 w-4"
-                  style={{ backgroundColor: "#f59e0b", borderTop: "1px dashed #f59e0b" }}
-                />
-                <span>Monthly Budget: ฿{monthlyBudget.toLocaleString()} (${(monthlyBudget / USD_EXCHANGE_RATE).toFixed(2)})</span>
-              </div>
+            <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-500">
+              <svg width="10" height="1" className="flex-shrink-0" aria-hidden>
+                <line x1="0" y1="0.5" x2="10" y2="0.5" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2 1" />
+              </svg>
+              <span>Monthly Budget: ฿{monthlyBudget.toLocaleString()} (${(monthlyBudget / USD_EXCHANGE_RATE).toFixed(2)})</span>
             </div>
           </div>
 
