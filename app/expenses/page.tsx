@@ -9,9 +9,11 @@ import ExpenseOverviewCard from "@/components/ExpenseOverviewCard";
 import DailySpendGraph from "@/components/DailySpendGraph";
 import AgentBreakdown from "@/components/AgentBreakdown";
 import ModelBreakdown from "@/components/ModelBreakdown";
+import MtdExpenseCard from "@/components/MtdExpenseCard";
+import StatusBadge from "@/components/StatusBadge";
 import { useExpenses } from "@/hooks/useExpenses";
 import type { ExpenseSummaryApiPayload } from "@/types/expenses";
-import { Activity, PieChart, TrendingUp } from "lucide-react";
+import { Activity } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -23,23 +25,66 @@ import {
   YAxis,
 } from "recharts";
 
-const YTD_MONTHS = Array.from({ length: 12 }, (_, index) => `2026-${String(index + 1).padStart(2, "0")}`);
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const YTD_BAR_GRADIENT_ID = "ytdMonthlyBarGradient";
 const YTD_BAR_RED_GRADIENT_ID = "ytdMonthlyBarRedGradient";
 const USD_EXCHANGE_RATE = 33;
+
+const buildYearMonths = (year: number) =>
+  Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
+
+const clampYear = (year: number) => Math.max(2026, Math.min(2030, year));
+
+const getYearlyBudget = (year: number) => (year === 2026 ? 1500 * 10 : 1500 * 12);
+
+const getYearStartMonth = (year: number) => (year === 2026 ? 3 : 1);
+
+const getYearEndMonth = (year: number, currentYear: number, currentMonth: number) => {
+  if (year < currentYear) {
+    return 12;
+  }
+
+  return currentMonth;
+};
+
+const getYtdTotalForYear = (
+  monthly: { month: string; amount: number }[],
+  year: number,
+  currentYear: number,
+  currentMonth: number,
+) => {
+  const startMonth = getYearStartMonth(year);
+  const rawEndMonth = getYearEndMonth(year, currentYear, currentMonth);
+  const endMonth = Math.max(Math.min(12, rawEndMonth), 1);
+
+  return monthly.reduce((sum, entry) => {
+    const [, monthPart] = entry.month.split("-") ?? [];
+    const monthNumber = Number(monthPart);
+
+    if (!Number.isFinite(monthNumber)) {
+      return sum;
+    }
+
+    if (monthNumber < startMonth || monthNumber > endMonth) {
+      return sum;
+    }
+
+    return sum + entry.amount;
+  }, 0);
+};
+
+const getUsageStatus = (usagePct: number) => {
+  if (usagePct >= 100) return "over";
+  if (usagePct >= 93) return "restrict";
+  if (usagePct >= 80) return "alert";
+  return "normal";
+};
 
 const formatTHB = (value: number) =>
   `฿${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const formatUSD = (value: number) =>
   `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const AGENT_COLORS: Record<string, string> = {
-  MONDAY: "#22d3ee",
-  BLUEPRINT: "#818cf8",
-  QUANT: "#34d399",
-};
 
 type SummaryResponse = {
   success: boolean;
@@ -49,6 +94,10 @@ type SummaryResponse = {
 
 export default function ExpensesPage() {
   const expensesHook = useExpenses();
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+  const [selectedYear, setSelectedYear] = useState(() => clampYear(currentYear));
   const [ytdTotals, setYtdTotals] = useState<{
     total: number;
     monthly: { month: string; label: string; amount: number }[];
@@ -64,13 +113,14 @@ export default function ExpensesPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchYtdTotals() {
+    async function fetchYtdTotals(year: number) {
       try {
         setYtdTotals((prev) => ({ ...prev, loading: true, error: null }));
 
         const now = new Date();
+        const monthsForYear = buildYearMonths(year);
         const monthly = await Promise.all(
-          YTD_MONTHS.map(async (month, index) => {
+          monthsForYear.map(async (month, index) => {
             const monthLabel = MONTH_LABELS[index] ?? month;
             const isFutureMonth = new Date(`${month}-01T00:00:00`).getTime() > now.getTime();
 
@@ -112,51 +162,34 @@ export default function ExpensesPage() {
       }
     }
 
-    fetchYtdTotals();
+    fetchYtdTotals(selectedYear);
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedYear]);
 
-  const ytdUsd = ytdTotals.total / USD_EXCHANGE_RATE;
-
-  const agentBreakdownData = useMemo(() => {
-    const metricsBreakdown = expensesHook.summary?.metrics?.breakdown.byAgent ?? [];
-    const fallbackBreakdown = expensesHook.summary?.breakdown.byAgent ?? [];
-    const source = metricsBreakdown.length ? metricsBreakdown : fallbackBreakdown;
-    const total = source.reduce((sum, item) => sum + item.total, 0) || 0;
-
-    const agentKeys: (keyof typeof AGENT_COLORS)[] = ["MONDAY", "BLUEPRINT", "QUANT"];
-
-    return agentKeys.map((key) => {
-      const item = source.find((entry) => entry.key === key);
-      const amount = item?.total ?? 0;
-      const percent = item?.percent ?? (total > 0 ? (amount / total) * 100 : 0);
-
-      return {
-        key,
-        label: key,
-        total: amount,
-        percent,
-        color: AGENT_COLORS[key] ?? "#f472b6",
-      };
-    });
-  }, [expensesHook.summary]);
+  const ytdTotal = useMemo(
+    () => getYtdTotalForYear(ytdTotals.monthly, selectedYear, currentYear, currentMonth),
+    [ytdTotals.monthly, selectedYear, currentYear, currentMonth],
+  );
+  const ytdUsd = ytdTotal / USD_EXCHANGE_RATE;
+  const yearlyBudget = getYearlyBudget(selectedYear);
+  const yearlyRemaining = Math.max(yearlyBudget - ytdTotal, 0);
+  const yearlyRemainingUsd = yearlyRemaining / USD_EXCHANGE_RATE;
+  const usagePct = yearlyBudget > 0 ? (ytdTotal / yearlyBudget) * 100 : 0;
+  const ytdStatus = getUsageStatus(usagePct);
 
   const monthlyBudget = 1500;
-  const formattedMonthlyBudgetLabel = monthlyBudget.toLocaleString("en-US");
-  const monthlyBudgetUsdLabel = (monthlyBudget / USD_EXCHANGE_RATE).toFixed(2);
   const summaryMonth = expensesHook.summary?.month;
-  const today = new Date();
   const [summaryYear, summaryMonthIndex] = summaryMonth?.split("-") ?? [
-    String(today.getFullYear()),
-    String(today.getMonth() + 1).padStart(2, "0"),
+    String(currentYear),
+    String(currentMonth).padStart(2, "0"),
   ];
   const parsedYear = Number(summaryYear);
   const parsedMonth = Number(summaryMonthIndex);
   const daysInMonth = new Date(parsedYear, parsedMonth, 0).getDate();
-  const isCurrentMonth = parsedYear === today.getFullYear() && parsedMonth === today.getMonth() + 1;
+  const isCurrentMonth = parsedYear === currentYear && parsedMonth === currentMonth;
   const daysElapsed = isCurrentMonth ? today.getDate() : daysInMonth;
   const dailyBudget = monthlyBudget / daysInMonth;
   const targetAccumulated = dailyBudget * daysElapsed;
@@ -184,17 +217,31 @@ export default function ExpensesPage() {
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-border/80 bg-[#0f0f0f] p-5 shadow-[0_0_24px_rgba(0,0,0,0.2)]">
-            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
-              <TrendingUp size={16} className="text-accent-green" />
-              YTD Total Expense
+          <div className="border border-border rounded-2xl bg-[#0f0f0f] p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-white">YTD Total Expense</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={2026}
+                  max={2030}
+                  step={1}
+                  value={selectedYear}
+                  onChange={(event) => {
+                    const nextYear = Number(event.target.value);
+                    if (Number.isNaN(nextYear)) return;
+                    setSelectedYear(clampYear(nextYear));
+                  }}
+                  className="w-24 rounded-lg border border-white/10 bg-transparent px-3 py-1 text-sm text-white outline-none transition focus:border-accent-cyan/60 focus:ring-2 focus:ring-accent-cyan/40"
+                />
+                <StatusBadge status={ytdStatus} />
+              </div>
             </div>
-            <p className="mt-1 text-[11px] text-gray-500">Jan – Now</p>
-            <div className="mt-4 text-4xl font-semibold text-white">
+            <div className="text-4xl font-semibold text-white">
               {ytdTotals.loading ? (
                 <div className="h-10 w-32 animate-pulse rounded-lg bg-[#1a1a1a]" />
               ) : (
-                formatTHB(ytdTotals.total)
+                formatTHB(ytdTotal)
               )}
             </div>
             <div className="mt-1 text-sm text-gray-500">
@@ -202,6 +249,13 @@ export default function ExpensesPage() {
                 <div className="h-4 w-24 animate-pulse rounded bg-[#1a1a1a]" />
               ) : (
                 <>({formatUSD(ytdUsd)})</>
+              )}
+            </div>
+            <div className="mt-2 text-sm text-gray-400">
+              {ytdTotals.loading ? (
+                <div className="h-4 w-48 animate-pulse rounded bg-[#1a1a1a]" />
+              ) : (
+                <>Remaining (Year): {formatTHB(yearlyRemaining)} ({formatUSD(yearlyRemainingUsd)})</>
               )}
             </div>
             {ytdTotals.error && <p className="mt-3 text-xs text-red-400">{ytdTotals.error}</p>}
@@ -276,7 +330,7 @@ export default function ExpensesPage() {
                       strokeDasharray="4 4"
                       ifOverflow="extendDomain"
                       label={{
-                        value: `Monthly Budget: ฿${formattedMonthlyBudgetLabel} ($${monthlyBudgetUsdLabel})`,
+                        value: `Monthly Budget: ${formatTHB(monthlyBudget)} (${formatUSD(monthlyBudget / USD_EXCHANGE_RATE)})`,
                         position: "right",
                         fill: "#9ca3af",
                         fontSize: 11,
@@ -299,56 +353,17 @@ export default function ExpensesPage() {
                   strokeLinecap="round"
                 />
               </svg>
-              <span>Monthly Budget: ฿{monthlyBudget.toLocaleString()} (${(monthlyBudget / USD_EXCHANGE_RATE).toFixed(2)})</span>
+              <span>
+                Monthly Budget: {formatTHB(monthlyBudget)} ({formatUSD(monthlyBudget / USD_EXCHANGE_RATE)})
+              </span>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border/80 bg-[#0f0f0f] p-5 shadow-[0_0_24px_rgba(0,0,0,0.2)]">
-            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
-              <PieChart size={16} className="text-accent-cyan" />
-              Agent Breakdown
-            </div>
-            <p className="mt-1 text-[11px] text-gray-500">Current month share</p>
-            <div className="mt-4 space-y-4">
-              {expensesHook.loading ? (
-                <div className="space-y-3">
-                  {[0, 1, 2].map((item) => (
-                    <div key={item} className="space-y-2">
-                      <div className="h-3 w-1/2 animate-pulse rounded bg-[#1a1a1a]" />
-                      <div className="h-2 animate-pulse rounded-full bg-[#1a1a1a]" />
-                    </div>
-                  ))}
-                </div>
-              ) : agentBreakdownData.every((item) => item.total === 0) ? (
-                <p className="text-sm text-gray-500">No agent spend logged this month.</p>
-              ) : (
-                agentBreakdownData.map((item) => (
-                  <div key={item.key} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm text-gray-300">
-                      <span className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        {item.label}
-                      </span>
-                      <span>{item.percent.toFixed(1)}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-[#1a1a1a]">
-                      <div
-                        className="h-2 rounded-full"
-                        style={{
-                          width: `${Math.min(item.percent, 100)}%`,
-                          backgroundColor: item.color,
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">{formatTHB(item.total)} spent</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <MtdExpenseCard
+            summary={expensesHook.summary}
+            month={expensesHook.month}
+            setMonth={expensesHook.setMonth}
+          />
 
           <div className="rounded-2xl border border-border/80 bg-[#0f0f0f] p-5 shadow-[0_0_24px_rgba(0,0,0,0.2)]">
             <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
