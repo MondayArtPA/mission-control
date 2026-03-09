@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Expense, ExpenseInput, MonthlyExpenseSummary } from "@/types/expenses";
+import type { Expense, ExpenseInput, ExpenseSummaryApiPayload } from "@/types/expenses";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -7,9 +7,9 @@ interface ApiResponse<T> {
   error?: string;
 }
 
-interface UseExpensesReturn {
+export interface UseExpensesReturn {
   expenses: Expense[];
-  summary: MonthlyExpenseSummary | null;
+  summary: ExpenseSummaryApiPayload | null;
   month: string;
   loading: boolean;
   submitting: boolean;
@@ -26,7 +26,7 @@ function getCurrentMonth() {
 
 export function useExpenses(initialMonth = getCurrentMonth()): UseExpensesReturn {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [summary, setSummary] = useState<MonthlyExpenseSummary | null>(null);
+  const [summary, setSummary] = useState<ExpenseSummaryApiPayload | null>(null);
   const [month, setMonth] = useState(initialMonth);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +43,7 @@ export function useExpenses(initialMonth = getCurrentMonth()): UseExpensesReturn
       ]);
 
       const expensesData: ApiResponse<Expense[]> = await expensesResponse.json();
-      const summaryData: ApiResponse<MonthlyExpenseSummary> = await summaryResponse.json();
+      const summaryData: ApiResponse<ExpenseSummaryApiPayload> = await summaryResponse.json();
 
       if (!expensesResponse.ok || !expensesData.success) {
         throw new Error(expensesData.error || "Failed to fetch expenses");

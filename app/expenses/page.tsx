@@ -2,6 +2,11 @@
 
 import AppShell from "@/components/AppShell";
 import ExpenseSection from "@/components/ExpenseSection";
+import ExpenseOverviewCard from "@/components/ExpenseOverviewCard";
+import DailySpendGraph from "@/components/DailySpendGraph";
+import AgentBreakdown from "@/components/AgentBreakdown";
+import ModelBreakdown from "@/components/ModelBreakdown";
+import { useExpenses } from "@/hooks/useExpenses";
 import { ArrowDownRight, CircleDollarSign, Wallet } from "lucide-react";
 
 const expenseHighlights = [
@@ -26,6 +31,8 @@ const expenseHighlights = [
 ];
 
 export default function ExpensesPage() {
+  const expensesHook = useExpenses();
+
   return (
     <AppShell
       eyebrow="Finance"
@@ -51,7 +58,26 @@ export default function ExpensesPage() {
           })}
         </div>
 
-        <ExpenseSection />
+        <ExpenseOverviewCard
+          summary={expensesHook.summary}
+          month={expensesHook.month}
+          setMonth={expensesHook.setMonth}
+          refreshExpenses={expensesHook.refreshExpenses}
+          loading={expensesHook.loading}
+        />
+
+        <DailySpendGraph
+          summary={expensesHook.summary}
+          loading={expensesHook.loading}
+          error={expensesHook.error}
+        />
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <AgentBreakdown summary={expensesHook.summary} loading={expensesHook.loading} />
+          <ModelBreakdown summary={expensesHook.summary} loading={expensesHook.loading} />
+        </div>
+
+        <ExpenseSection {...expensesHook} />
       </div>
     </AppShell>
   );

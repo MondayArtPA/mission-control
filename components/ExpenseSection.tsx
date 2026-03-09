@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Wallet,
 } from "lucide-react";
-import { useExpenses } from "@/hooks/useExpenses";
+import type { UseExpensesReturn } from "@/hooks/useExpenses";
 import type { ExpenseInput } from "@/types/expenses";
 
 const CATEGORY_PRESETS = [
@@ -53,9 +53,17 @@ function formatMonthLabel(value: string) {
   });
 }
 
-export default function ExpenseSection() {
-  const { summary, month, loading, submitting, error, setMonth, addExpense, refreshExpenses, recentExpenses } = useExpenses();
-
+export default function ExpenseSection({
+  summary,
+  month,
+  loading,
+  submitting,
+  error,
+  setMonth,
+  addExpense,
+  refreshExpenses,
+  recentExpenses,
+}: UseExpensesReturn) {
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(CATEGORY_PRESETS[0]);
