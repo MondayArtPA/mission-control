@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+
+import StatusBadge from "@/components/StatusBadge";
 import {
   CartesianGrid,
   Line,
@@ -14,9 +16,12 @@ import {
 import type { TooltipProps } from "recharts";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 
-import type { ExpenseSummaryApiPayload } from "@/types/expenses";
+import type { ExpenseSummaryApiPayload, ExpenseBudgetStatus } from "@/types/expenses";
 
 const USD_EXCHANGE_RATE = 33;
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_START_YEAR = 2026;
+const MONTH_END_YEAR = 2030;
 
 const formatTHB = (value: number) =>
   `฿${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -29,6 +34,8 @@ const DAY_LABEL = new Intl.DateTimeFormat("en-US", { month: "short", day: "numer
 interface ProgressGuardrailsCardProps {
   summary: ExpenseSummaryApiPayload | null;
   loading: boolean;
+  month: string;
+  setMonth: (value: string) => void;
 }
 
 interface ChartPoint {
@@ -85,64 +92,46 @@ const ChartTooltip = ({ active, payload }: TooltipProps<ValueType, NameType>) =>
   );
 };
 
-export default function ProgressGuardrailsCard({ summary, loading }: ProgressGuardrailsCardProps) {
+export default function ProgressGuardrailsCard({ summary, loading, month, setMonth }: ProgressGuardrailsCardProps) {
   const budget = summary?.metrics?.totals?.budget ?? 1500;
   const alertLine = summary?.metrics?.totals?.alertThreshold ?? 1200;
   const restrictLine = summary?.metrics?.totals?.restrictThreshold ?? 1395;
-  const actualSpent = summary?.metrics?.totals?.spent ?? 0;
 
   const { chartData, projectedEom, axisMax } = useMemo(() => buildChartData(summary), [summary]);
-
+  const guardrailStatus = resolveStatus(projectedEom, alertLine, restrictLine, budget);
+  const effectiveMonth = month || summary?.month || getCurrentMonth();
+  const monthSelectOptions = useMemo(() => buildMonthOptions(effectiveMonth), [effectiveMonth]);
   const projectedUsd = projectedEom / USD_EXCHANGE_RATE;
-  const actualUsd = actualSpent / USD_EXCHANGE_RATE;
-  const budgetUsd = budget / USD_EXCHANGE_RATE;
-
-  const status = resolveStatus(projectedEom, alertLine, restrictLine, budget);
 
   const yAxisMax = Math.max(axisMax, budget, alertLine, restrictLine) * 1.05 || budget * 1.1;
   const showSkeleton = loading && !summary;
-  const helperText = showSkeleton ? "Awaiting data…" : status.helper;
 
   return (
     <section className="rounded-2xl border border-border bg-[#0f0f0f] p-5">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-mono uppercase tracking-[0.28em] text-gray-500">Card 3</p>
-          <h3 className="text-base font-semibold text-white">Progress vs Budget Guardrails</h3>
-          <p className="text-sm text-gray-500">Tracking daily velocity, cumulative burn, and projected month-end.</p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <SummaryMetric
-            label="Actual MTD"
-            primary={formatTHB(actualSpent)}
-            secondary={formatUSD(actualUsd)}
-            loading={showSkeleton}
-          />
-          <SummaryMetric
-            label="Projected EOM"
-            primary={formatTHB(projectedEom)}
-            secondary={formatUSD(projectedUsd)}
-            loading={showSkeleton}
-          />
-          <SummaryMetric
-            label="Budget"
-            primary={formatTHB(budget)}
-            secondary={formatUSD(budgetUsd)}
-            loading={showSkeleton}
-          />
-          <div className="flex flex-col justify-between rounded-xl border border-border/80 bg-[#111] p-3 text-sm text-gray-400">
-            <span className="text-[11px] uppercase tracking-wide text-gray-500">Status</span>
-            {showSkeleton ? (
-              <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#1c1c1c]" />
-            ) : (
-              <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${status.pillClass}`}>
-                <span>{status.emoji}</span>
-                <span>{status.label}</span>
-              </span>
-            )}
-            <span className="text-[11px] text-gray-500">{helperText}</span>
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-white">Progress vs Budget Guardrails</h3>
+            {!showSkeleton && <StatusBadge status={guardrailStatus} className="text-xs" />}
           </div>
+          <select
+            value={effectiveMonth}
+            onChange={(event) => setMonth(event.target.value)}
+            className="min-w-[7rem] bg-[#1a1a1a] border border-border rounded px-3 py-1.5 text-sm font-mono text-white hover:border-accent-green focus:border-accent-green focus:outline-none cursor-pointer transition"
+          >
+            {monthSelectOptions.map((option) => (
+              <option key={option.value} value={option.value} className="bg-[#0f0f0f] text-white">
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          {showSkeleton ? (
+            <div className="h-8 w-48 animate-pulse rounded bg-[#1c1c1c]" />
+          ) : (
+            <ProjectedEomDisplay value={projectedEom} usdValue={projectedUsd} />
+          )}
         </div>
       </div>
 
@@ -161,14 +150,14 @@ export default function ProgressGuardrailsCard({ summary, loading }: ProgressGua
                 dataKey="label"
                 tickLine={false}
                 stroke="#666"
-                fontSize={11}
+                fontSize={12}
                 dy={6}
                 minTickGap={12}
               />
               <YAxis
                 stroke="#666"
                 tickLine={false}
-                fontSize={11}
+                fontSize={12}
                 width={48}
                 domain={[0, yAxisMax]}
                 tickFormatter={(value) => `${Math.round(Number(value))}`}
@@ -231,6 +220,16 @@ export default function ProgressGuardrailsCard({ summary, loading }: ProgressGua
         <LegendSwatch color="bg-amber-400" label="Projected" dashed />
       </div>
     </section>
+  );
+}
+
+function ProjectedEomDisplay({ value, usdValue }: { value: number; usdValue: number }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-2">
+      <span className="text-sm text-gray-500">Projected EOM:</span>
+      <span className="text-2xl font-semibold text-white">{formatTHB(value)}</span>
+      <span className="text-sm text-gray-500">({formatUSD(usdValue)})</span>
+    </div>
   );
 }
 
