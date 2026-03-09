@@ -1,7 +1,23 @@
 {
-  "name": "mission-control",
-  "version": "0.1.0",
+  "name": "@artistuta/mission-control",
+  "version": "1.0.0",
+  "description": "Futuristic command center for personal life and business management",
+  "author": "Artistuta",
+  "license": "MIT",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "file:///Users/Openclaw/.openclaw/workspace/mission-control"
+  },
+  "keywords": [
+    "dashboard",
+    "mission-control",
+    "agent-based",
+    "task-management",
+    "real-time",
+    "next.js",
+    "typescript"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
