@@ -11,7 +11,15 @@ import ModelBreakdown from "@/components/ModelBreakdown";
 import { useExpenses } from "@/hooks/useExpenses";
 import type { ExpenseSummaryApiPayload } from "@/types/expenses";
 import { Activity, PieChart, TrendingUp } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 const YTD_MONTHS = Array.from({ length: 12 }, (_, index) => `2026-${String(index + 1).padStart(2, "0")}`);
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -216,6 +224,12 @@ export default function ExpensesPage() {
                       interval={0}
                     />
                     <YAxis hide domain={[0, (dataMax: number) => (dataMax === 0 ? 1000 : dataMax * 1.15)]} />
+                    <ReferenceLine
+                      y={1500}
+                      stroke="#f59e0b"
+                      strokeDasharray="4 4"
+                      label={{ value: "Budget ฿1,500", position: "right", fill: "#9ca3af", fontSize: 11 }}
+                    />
                     <RechartsTooltip
                       cursor={{ fill: "rgba(52, 211, 153, 0.08)" }}
                       contentStyle={{
