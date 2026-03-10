@@ -8,3 +8,61 @@
 
  ✓ Starting...
  ✓ Ready in 231ms
+
+> @artistuta/mission-control@1.1.0 start
+> next start
+
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.3.10:3000
+
+ ✓ Starting...
+ ✓ Ready in 233ms
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+    at async L (.next/server/app/page.js:1:3488) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+}
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+    at async (.next/server/pages/_error.js:1:6810) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+}
+
+> @artistuta/mission-control@1.1.0 start
+> next start
+
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.3.10:3000
+
+ ✓ Starting...
+ ✓ Ready in 216ms
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+    at async L (.next/server/app/page.js:1:3488) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+}
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+    at async (.next/server/pages/_error.js:1:6810) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/Openclaw/.openclaw/workspace/mission-control/.next/required-server-files.json'
+}
+
+> @artistuta/mission-control@1.1.0 start
+> next start
+
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.3.10:3000
+
+ ✓ Starting...
+ ✓ Ready in 218ms

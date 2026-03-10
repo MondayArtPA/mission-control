@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AppShell from "@/components/AppShell";
 import ExpenseSection from "@/components/ExpenseSection";
 import ExpenseCalculationInfo from "@/components/ExpenseCalculationInfo";
-import ExpenseOverviewCard from "@/components/ExpenseOverviewCard";
-import DailySpendGraph from "@/components/DailySpendGraph";
 import AgentBreakdown from "@/components/AgentBreakdown";
 import ModelBreakdown from "@/components/ModelBreakdown";
 import MtdExpenseCard from "@/components/MtdExpenseCard";
 import ProgressGuardrailsCard from "@/components/ProgressGuardrailsCard";
 import StatusBadge from "@/components/StatusBadge";
+import TokenUsageSection from "@/components/TokenUsageSection";
+import OpenRouterComparison from "@/components/OpenRouterComparison";
 import { useExpenses } from "@/hooks/useExpenses";
 import type { ExpenseSummaryApiPayload } from "@/types/expenses";
 import {
@@ -36,7 +36,7 @@ const buildYearMonths = (year: number) =>
 
 const clampYear = (year: number) => Math.max(2026, Math.min(2030, year));
 
-const getYearlyBudget = (year: number) => (year === 2026 ? 1500 * 10 : 1500 * 12);
+const getYearlyBudget = (year: number) => (year === 2026 ? 5000 * 10 : 5000 * 12);
 
 const getYearStartMonth = (year: number) => (year === 2026 ? 3 : 1);
 
@@ -87,6 +87,36 @@ const formatTHB = (value: number) =>
 const formatUSD = (value: number) =>
   `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const formatCurrencyPair = (thb?: number | null, usd?: number | null) => {
+  if (thb == null || usd == null) {
+    return '\u2014';
+  }
+  return `${formatTHB(thb)} (${formatUSD(usd)})`;
+};
+
+const formatGapDisplay = (thb?: number | null, pct?: number | null) => {
+  if (thb == null || pct == null) {
+    return '\u2014';
+  }
+  return `${formatTHB(thb)} (${pct.toFixed(1)}%)`;
+};
+
+const formatBangkokTimestamp = (iso?: string | null) => {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Bangkok',
+  });
+};
+
 type SummaryResponse = {
   success: boolean;
   data?: ExpenseSummaryApiPayload;
@@ -95,6 +125,10 @@ type SummaryResponse = {
 
 export default function ExpensesPage() {
   const expensesHook = useExpenses();
+  const { refreshExpenses } = expensesHook;
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth() + 1;
@@ -110,6 +144,41 @@ export default function ExpensesPage() {
     loading: true,
     error: null,
   });
+
+  const handleSyncCosts = useCallback(async () => {
+    try {
+      setSyncing(true);
+      setSyncMessage(null);
+      setSyncError(null);
+
+      const response = await fetch("/api/expenses/sync", { method: "POST" });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error ?? "Failed to sync provider costs");
+      }
+
+      await refreshExpenses();
+
+      const loggedProviders = Array.isArray(payload.data?.loggedProviders) ? payload.data.loggedProviders : [];
+      const syncedCount = loggedProviders.length;
+      const totalThb = typeof payload.data?.totals?.thb === "number" ? payload.data.totals.thb : null;
+
+      if (syncedCount === 0) {
+        setSyncMessage("No providers synced (missing API keys?)");
+      } else {
+        const parts = [`Synced ${syncedCount} provider${syncedCount > 1 ? "s" : ""}`];
+        if (totalThb && totalThb > 0) {
+          parts.push(formatTHB(totalThb));
+        }
+        setSyncMessage(parts.join(" · "));
+      }
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : "Failed to sync provider costs");
+    } finally {
+      setSyncing(false);
+    }
+  }, [refreshExpenses]);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,8 +250,22 @@ export default function ExpensesPage() {
   const usagePct = yearlyBudget > 0 ? (ytdTotal / yearlyBudget) * 100 : 0;
   const ytdStatus = getUsageStatus(usagePct);
 
-  const monthlyBudget = 1500;
+  const monthlyBudget = 5000;
   const actualSpent = expensesHook.summary?.totalExpense ?? 0;
+
+  const lastUpdated = useMemo(() => {
+    if (!expensesHook.lastUpdatedAt) {
+      return '-';
+    }
+    return expensesHook.lastUpdatedAt.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Bangkok'
+    });
+  }, [expensesHook.lastUpdatedAt]);
 
   return (
     <AppShell
@@ -190,10 +273,27 @@ export default function ExpensesPage() {
       title="Expenses"
       description="Review category performance, recent outflows, and log new spend in a dedicated dashboard page."
     >
+      <div className="mb-4 space-y-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-gray-500">
+            <span>Last updated: {lastUpdated}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleSyncCosts}
+            disabled={syncing}
+            className="w-full min-h-[44px] rounded-md border border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {syncing ? "Syncing…" : "Sync Costs"}
+          </button>
+        </div>
+        {syncMessage && <p className="text-[11px] font-mono text-emerald-300">{syncMessage}</p>}
+        {syncError && <p className="text-[11px] font-mono text-red-400">{syncError}</p>}
+      </div>
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="border border-border rounded-2xl bg-[#0f0f0f] p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-white">YTD Total Expense</h3>
                 <StatusBadge status={ytdStatus} />
@@ -205,7 +305,7 @@ export default function ExpensesPage() {
                   if (Number.isNaN(nextYear)) return;
                   setSelectedYear(clampYear(nextYear));
                 }}
-                className="min-w-[5.5rem] bg-[#1a1a1a] border border-border rounded px-3 py-1.5 text-xs font-mono text-white hover:border-accent-green focus:border-accent-green focus:outline-none cursor-pointer transition"
+                className="min-h-[44px] w-full rounded px-3 py-2 font-mono text-xs text-white transition focus:border-accent-green focus:outline-none bg-[#1a1a1a] border border-border hover:border-accent-green sm:w-auto"
               >
                 {YEAR_OPTIONS.map((yearOption) => (
                   <option key={yearOption} value={yearOption} className="bg-[#0f0f0f] text-white">
@@ -245,7 +345,7 @@ export default function ExpensesPage() {
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ytdTotals.monthly} barCategoryGap={12} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
+                  <BarChart data={ytdTotals.monthly} barCategoryGap={6} margin={{ left: 12, right: 12, top: 8, bottom: 10 }}>
                     <defs>
                       <linearGradient id={YTD_BAR_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#34d399" stopOpacity={0.95} />
@@ -262,8 +362,9 @@ export default function ExpensesPage() {
                       tickLine={false}
                       tick={{ fill: "#9ca3af", fontSize: 11 }}
                       interval={0}
+                      padding={{ left: 20, right: 20 }}
                     />
-                    <YAxis hide width={48} domain={[0, (dataMax: number) => Math.max(1500, dataMax) * 1.15]} />
+                    <YAxis hide width={48} domain={[0, (dataMax: number) => Math.max(5000, dataMax) * 1.15]} />
                     <RechartsTooltip
                       cursor={{ fill: "rgba(52, 211, 153, 0.08)" }}
                       contentStyle={{
@@ -274,9 +375,10 @@ export default function ExpensesPage() {
                         fontSize: "0.85rem",
                         fontFamily: "'Space Mono', 'DM Mono', monospace",
                       }}
-                      formatter={(value: number) => {
-                        const usdValue = value / USD_EXCHANGE_RATE;
-                        return [`${formatTHB(value)} (${formatUSD(usdValue)})`, ""];
+                      formatter={(value) => {
+                        const numVal = typeof value === "number" ? value : Number(value) || 0;
+                        const usdValue = numVal / USD_EXCHANGE_RATE;
+                        return [`${formatTHB(numVal)} (${formatUSD(usdValue)})`, ""] as [string, string];
                       }}
                       labelFormatter={(label, payload) => {
                         const monthKey = payload?.[0]?.payload?.month ?? label;
@@ -300,7 +402,7 @@ export default function ExpensesPage() {
                       ))}
                     </Bar>
                     <ReferenceLine
-                      y={1500}
+                      y={5000}
                       stroke="#f59e0b"
                       strokeWidth={2}
                       strokeOpacity={0.95}
@@ -342,29 +444,19 @@ export default function ExpensesPage() {
             setMonth={expensesHook.setMonth}
           />
 
-          <ProgressGuardrailsCard 
-            summary={expensesHook.summary} 
+          <ProgressGuardrailsCard
+            summary={expensesHook.summary}
             loading={expensesHook.loading}
             month={expensesHook.month}
             setMonth={expensesHook.setMonth}
           />
         </div>
 
-        <ExpenseOverviewCard
-          summary={expensesHook.summary}
-          month={expensesHook.month}
-          setMonth={expensesHook.setMonth}
-          refreshExpenses={expensesHook.refreshExpenses}
-          loading={expensesHook.loading}
-        />
+        <TokenUsageSection summary={expensesHook.summary} loading={expensesHook.loading} />
 
-        <DailySpendGraph
-          summary={expensesHook.summary}
-          loading={expensesHook.loading}
-          error={expensesHook.error}
-        />
+        <OpenRouterComparison />
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <AgentBreakdown summary={expensesHook.summary} loading={expensesHook.loading} />
           <ModelBreakdown summary={expensesHook.summary} loading={expensesHook.loading} />
         </div>

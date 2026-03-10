@@ -91,7 +91,7 @@ function formatMonthLabel(value?: string) {
   });
 }
 
-const TrendTooltip = ({ active, payload }: TooltipProps<ValueType, NameType>) => {
+const TrendTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
@@ -205,7 +205,7 @@ export default function ExpenseGraph() {
           )}
 
           {!error && (
-            <div className="h-80">
+            <div className="h-64 sm:h-80">
               {loading ? (
                 <div className="flex h-full items-center justify-center text-sm text-gray-500">
                   Loading expense trend…

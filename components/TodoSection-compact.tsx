@@ -106,7 +106,7 @@ export default function TodoSection() {
             ? "in-progress"
             : "pending";
 
-    await updateTodo(id, { status: nextStatus, blockedReason: nextStatus === "blocked" ? "Needs follow-up" : undefined });
+    await updateTodo(id, { status: nextStatus, blockedReason: undefined });
   };
 
   const statusSummary = `${counts.open} open • ${counts.inProgress} active • ${counts.blocked} blocked`;
@@ -154,13 +154,13 @@ export default function TodoSection() {
           onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
           placeholder="Create a task that reflects actual work to be done"
           disabled={isAdding}
-          className="w-full bg-[#1a1a1a] border border-border rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent-cyan transition-colors disabled:opacity-50"
+          className="w-full min-h-[44px] rounded border border-border bg-[#1a1a1a] px-3 py-2 text-xs font-mono transition-colors focus:border-accent-cyan focus:outline-none disabled:opacity-50"
         />
         <div className="flex gap-2">
           <select
             value={selectedAgent}
             onChange={(e) => setSelectedAgent(e.target.value)}
-            className="flex-1 bg-[#1a1a1a] border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-accent-cyan transition-colors"
+            className="flex-1 min-h-[44px] rounded border border-border bg-[#1a1a1a] px-2 py-1.5 text-xs font-mono transition-colors focus:border-accent-cyan focus:outline-none"
             style={{ color: AGENT_COLORS[selectedAgent] }}
           >
             {Object.keys(AGENT_ICONS).map((agent) => (
@@ -170,7 +170,7 @@ export default function TodoSection() {
           <button
             onClick={handleAddTodo}
             disabled={isAdding || !newTodoTitle.trim()}
-            className="px-3 py-1.5 bg-accent-cyan hover:bg-accent-cyan/80 text-background font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-[44px] rounded bg-accent-cyan px-3 py-1.5 font-semibold text-background transition-colors hover:bg-accent-cyan/80 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isAdding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           </button>

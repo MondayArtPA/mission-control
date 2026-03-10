@@ -10,8 +10,13 @@ import {
   YAxis,
   Cell,
 } from "recharts";
-import type { TooltipProps } from "recharts";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
+
+type TooltipPayload = {
+  payload?: ChartDatum;
+  value?: ValueType;
+  name?: NameType;
+};
 import type { ExpenseBreakdownWithShare, ExpenseSummaryApiPayload } from "@/types/expenses";
 
 const THB = new Intl.NumberFormat("th-TH", {
@@ -35,7 +40,7 @@ interface ChartDatum extends ExpenseBreakdownWithShare {
   name: string;
 }
 
-const BreakdownTooltip = ({ active, payload }: TooltipProps<ValueType, NameType>) => {
+const BreakdownTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
   if (!active || !payload || payload.length === 0) return null;
   const data = payload[0]?.payload as ChartDatum | undefined;
   if (!data) return null;
@@ -58,17 +63,17 @@ export default function AgentBreakdown({ summary, loading }: AgentBreakdownProps
   const data: ChartDatum[] = source.map((item) => ({
     ...item,
     name: item.key,
-    percent: item.percent ?? (total > 0 ? (item.total / total) * 100 : 0),
+    percent: (item as ExpenseBreakdownWithShare).percent ?? (total > 0 ? (item.total / total) * 100 : 0),
   }));
 
   return (
-    <section className="rounded-2xl border border-border bg-[#0d0d0d] p-4">
+    <section className="rounded-2xl border border-border bg-[#0d0d0d] p-4 sm:p-6">
       <div className="mb-4">
         <p className="text-xs font-mono uppercase tracking-[0.28em] text-gray-500">Agents</p>
         <h2 className="text-lg font-semibold text-foreground">Breakdown by agent</h2>
         <p className="text-sm text-gray-500">Comparing MONDAY, BLUEPRINT, QUANT spend share.</p>
       </div>
-      <div className="h-64">
+      <div className="h-56 sm:h-64">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-gray-500">Loading…</div>
         ) : data.length === 0 ? (

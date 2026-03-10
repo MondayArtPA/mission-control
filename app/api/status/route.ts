@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildExpenseMetricsSummary } from "@/lib/expense-metrics";
-import { readTodos, type Todo } from "@/app/api/todos/route";
-import { readEvents, writeEvents, type Event } from "@/app/api/events/route";
+import { readTodos, type Todo } from "@/lib/todos";
+import { readEvents, writeEvents, type Event } from "@/lib/events";
 import { readSystemStatusState, writeSystemStatusState, type SystemStatusState } from "@/lib/system-status";
 import type { ExpenseBudgetStatus, ExpenseSummaryApiPayload } from "@/types/expenses";
 import type {

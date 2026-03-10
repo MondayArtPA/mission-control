@@ -14,6 +14,7 @@ export interface UseExpensesReturn {
   loading: boolean;
   submitting: boolean;
   error: string | null;
+  lastUpdatedAt: Date | null;
   setMonth: (month: string) => void;
   addExpense: (input: ExpenseInput) => Promise<void>;
   refreshExpenses: () => Promise<void>;
@@ -31,6 +32,7 @@ export function useExpenses(initialMonth = getCurrentMonth()): UseExpensesReturn
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   const fetchExpenses = useCallback(async (targetMonth: string) => {
     try {
@@ -55,6 +57,7 @@ export function useExpenses(initialMonth = getCurrentMonth()): UseExpensesReturn
 
       setExpenses(expensesData.data ?? []);
       setSummary(summaryData.data ?? null);
+      setLastUpdatedAt(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -95,6 +98,13 @@ export function useExpenses(initialMonth = getCurrentMonth()): UseExpensesReturn
 
   useEffect(() => {
     fetchExpenses(month);
+
+    // Auto-refresh every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchExpenses(month);
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [fetchExpenses, month]);
 
   const recentExpenses = useMemo(() => expenses.slice(0, 5), [expenses]);
@@ -106,6 +116,7 @@ export function useExpenses(initialMonth = getCurrentMonth()): UseExpensesReturn
     loading,
     submitting,
     error,
+    lastUpdatedAt,
     setMonth,
     addExpense,
     refreshExpenses,

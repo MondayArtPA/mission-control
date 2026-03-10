@@ -248,12 +248,12 @@ export default function FeedSection() {
 
       <div className="space-y-2 border-t border-border pt-4">
         <div className="text-xs text-gray-500">Manual entries are notes only. Authoritative task state lives in the task board.</div>
-        <div className="flex gap-2">
-          <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="bg-[#1a1a1a] border border-border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent-cyan transition-colors">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="min-h-[44px] rounded border border-border bg-[#1a1a1a] px-3 py-2 text-sm font-mono transition-colors focus:border-accent-cyan focus:outline-none sm:w-48">
             {agentsList.map((agent) => <option key={agent.id} value={agent.name}>{agent.name} - {agent.role}</option>)}
           </select>
-          <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddEvent()} placeholder="Add context note (not a completion status)" disabled={isAdding} className="flex-1 bg-[#1a1a1a] border border-border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent-magenta transition-colors disabled:opacity-50" />
-          <button onClick={handleAddEvent} disabled={isAdding || !newMessage.trim()} className="px-4 py-2 bg-accent-magenta hover:bg-accent-magenta/80 text-background font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddEvent()} placeholder="Add context note (not a completion status)" disabled={isAdding} className="min-h-[44px] flex-1 rounded border border-border bg-[#1a1a1a] px-3 py-2 text-sm font-mono transition-colors focus:border-accent-magenta focus:outline-none disabled:opacity-50" />
+          <button onClick={handleAddEvent} disabled={isAdding || !newMessage.trim()} className="min-h-[44px] rounded bg-accent-magenta px-4 py-2 font-semibold text-background transition-colors hover:bg-accent-magenta/80 disabled:cursor-not-allowed disabled:opacity-50">
             {isAdding ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} />}
           </button>
         </div>

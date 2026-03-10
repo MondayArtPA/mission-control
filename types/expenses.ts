@@ -110,8 +110,37 @@ export interface ExpenseMissionControlMetrics {
   };
 }
 
+export interface TokenUsageGroup {
+  key: string;
+  input: number;
+  output: number;
+  total: number;
+}
+
+export interface TokenUsageSummary {
+  totals: TokenUsageGroup;
+  byProvider: TokenUsageGroup[];
+  byAgent: TokenUsageGroup[];
+}
+
+
+export interface OpenRouterActualSummary {
+  monthLabel: string;
+  trackedThb: number;
+  trackedUsd: number;
+  actualThb: number | null;
+  actualUsd: number | null;
+  gapThb: number | null;
+  gapPct: number | null;
+  status: "ok" | "missing" | "error";
+  message?: string;
+  updatedAt?: string | null;
+}
+
 export type ExpenseSummaryApiPayload = MonthlyExpenseSummary & {
   metrics: ExpenseMissionControlMetrics;
+  tokenUsage: TokenUsageSummary;
+  openrouterActual: OpenRouterActualSummary;
 };
 
 export interface ExpenseBreakdownResponse {

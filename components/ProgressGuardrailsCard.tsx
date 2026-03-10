@@ -58,7 +58,7 @@ interface ProjectionResult {
   lastActualDay: number;
 }
 
-const ChartTooltip = ({ active, payload }: TooltipProps<ValueType, NameType>) => {
+const ChartTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
   if (!active || !payload || payload.length === 0) return null;
   const data = payload[0]?.payload as ChartPoint | undefined;
   if (!data) return null;

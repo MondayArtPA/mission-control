@@ -100,28 +100,28 @@ export default function ExpenseSection({
 
   return (
     <div className="border border-border rounded-lg p-4 bg-[#0f0f0f]">
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Wallet size={18} className="text-accent-green" />
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide">
               Expense Radar
             </h2>
-            <p className="text-[11px] text-gray-500 font-mono mt-0.5">
+            <p className="mt-0.5 text-[11px] font-mono text-gray-500">
               {formatMonthLabel(month)}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="bg-[#1a1a1a] border border-border rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-accent-green"
+            className="min-h-[44px] w-full rounded border border-border bg-[#1a1a1a] px-3 py-2 text-xs font-mono focus:border-accent-green focus:outline-none sm:w-auto"
           />
           <button
             onClick={refreshExpenses}
-            className="p-2 rounded border border-border bg-[#1a1a1a] hover:border-accent-green/60 hover:text-accent-green transition-colors"
+            className="flex h-11 w-full items-center justify-center rounded border border-border bg-[#1a1a1a] transition-colors hover:border-accent-green/60 hover:text-accent-green sm:w-11"
             title="Refresh expenses"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -135,7 +135,7 @@ export default function ExpenseSection({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-border bg-[#151515] p-3">
           <div className="flex items-center gap-2 mb-2 text-xs uppercase tracking-wide text-gray-500">
             <CircleDollarSign size={14} className="text-accent-green" />
@@ -156,7 +156,7 @@ export default function ExpenseSection({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-border bg-[#151515] p-3">
           <div className="text-[11px] font-mono uppercase tracking-wide text-gray-500 mb-1">
             Avg / Expense
@@ -274,10 +274,10 @@ export default function ExpenseSection({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="What did you spend on?"
-          className="w-full bg-[#1a1a1a] border border-border rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent-green transition-colors"
+          className="w-full rounded border border-border bg-[#1a1a1a] px-3 py-2 text-xs font-mono transition-colors focus:border-accent-green focus:outline-none min-h-[44px]"
         />
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input
             type="number"
             min="0"
@@ -286,12 +286,12 @@ export default function ExpenseSection({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="Amount"
-            className="bg-[#1a1a1a] border border-border rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent-green transition-colors"
+            className="min-h-[44px] rounded border border-border bg-[#1a1a1a] px-3 py-2 text-xs font-mono transition-colors focus:border-accent-green focus:outline-none"
           />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="bg-[#1a1a1a] border border-border rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent-green transition-colors"
+            className="min-h-[44px] rounded border border-border bg-[#1a1a1a] px-3 py-2 text-xs font-mono transition-colors focus:border-accent-green focus:outline-none"
           >
             {CATEGORY_PRESETS.map((item) => (
               <option key={item} value={item}>
@@ -301,17 +301,17 @@ export default function ExpenseSection({
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="bg-[#1a1a1a] border border-border rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-accent-green transition-colors"
+            className="min-h-[44px] rounded border border-border bg-[#1a1a1a] px-3 py-2 text-xs font-mono transition-colors focus:border-accent-green focus:outline-none"
           />
           <button
             type="submit"
             disabled={submitting || !title.trim() || !amount.trim()}
-            className="px-3 py-2 bg-accent-green hover:bg-accent-green/80 text-background font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs flex items-center justify-center gap-2"
+            className="flex items-center justify-center gap-2 rounded bg-accent-green px-3 py-2 text-xs font-semibold text-background transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:bg-accent-green/80 min-h-[44px]"
           >
             {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
             Add Expense
@@ -323,7 +323,7 @@ export default function ExpenseSection({
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional note"
           rows={2}
-          className="w-full bg-[#1a1a1a] border border-border rounded px-3 py-2 text-xs font-mono resize-none focus:outline-none focus:border-accent-green transition-colors"
+          className="w-full resize-none rounded border border-border bg-[#1a1a1a] px-3 py-2 text-xs font-mono transition-colors focus:border-accent-green focus:outline-none min-h-[64px]"
         />
       </form>
     </div>

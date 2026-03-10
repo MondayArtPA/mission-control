@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyTaskUpdates, validateTaskUpdateInput } from "@/lib/tasks";
-import { readTodos, Todo, writeTodos } from "../route";
+import { readTodos, writeTodos, type Todo } from "@/lib/todos";
 
 export async function GET(
   request: NextRequest,

@@ -9,16 +9,20 @@ import {
   ExpenseMissionControlMetrics,
   ExpenseSummaryApiPayload,
   MonthlyExpenseSummary,
+  OpenRouterActualSummary,
+  TokenUsageSummary,
 } from "@/types/expenses";
 import { ExpenseLogEntry, parseSessionExpenses } from "@/lib/expense-session-parser";
+import { canonicalizeModelLabel } from "@/lib/model-pricing";
+import { getOpenRouterActualSpend } from "@/lib/openrouter-usage";
 
 const LOG_TIMEZONE = "Asia/Bangkok";
 const LOG_DIR = process.env.EXPENSE_LOG_DIR ?? path.join(process.env.HOME ?? "", ".openclaw", "logs");
 const LOG_FILE_REGEX = /^\d{4}-\d{2}-\d{2}\.md$/;
 const MONTH_INPUT_REGEX = /^\d{4}-\d{2}$/;
-const BUDGET_BAHT = 1500;
-const ALERT_THRESHOLD = 1275; // 85% of budget
-const RESTRICT_THRESHOLD = 1425; // 95% of budget
+const BUDGET_BAHT = 5000;
+const ALERT_THRESHOLD = 4250; // 85% of budget
+const RESTRICT_THRESHOLD = 4750; // 95% of budget
 const DEFAULT_MONTH_FORMATTER = new Intl.DateTimeFormat("en-CA", { timeZone: LOG_TIMEZONE, year: "numeric", month: "2-digit" });
 const DEFAULT_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: LOG_TIMEZONE,
@@ -26,6 +30,9 @@ const DEFAULT_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 });
+const MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" });
+const OPENROUTER_EXCHANGE_RATE = 36;
+const OPENROUTER_PROVIDER_NAME = "OpenRouter";
 
 interface BreakdownMaps {
   byCategory: ExpenseBreakdownWithShare[];
@@ -46,6 +53,7 @@ interface EntriesResult {
   range: { start: Date; end: Date; isMonthToDate: boolean };
   month: string;
   expectedDays: string[];
+  tokenUsage: TokenUsageSummary;
 }
 
 export class ExpenseMetricsError extends Error {
@@ -63,10 +71,13 @@ export async function buildExpenseMetricsSummary(month?: string, now = new Date(
   const breakdowns = buildBreakdowns(result.entries, result.entries.reduce((sum, entry) => sum + entry.amount, 0));
   const summary = buildMonthlySummaryFromEntries(result, breakdowns);
   const metrics = buildMissionControlMetrics(result, breakdowns.byCategory, breakdowns.byAgent, breakdowns.byModel);
+  const openrouterActual = await buildOpenRouterActualSummary(result);
 
   return {
     ...summary,
     metrics,
+    tokenUsage: result.tokenUsage,
+    openrouterActual,
   };
 }
 
@@ -137,6 +148,17 @@ async function loadEntries(monthInput: string | undefined, now: Date): Promise<E
     }
   }
 
+  // Parse session .jsonl files for automatic expense tracking
+  const sessionResult = await parseSessionExpenses({ month: targetMonth, range, timezone: LOG_TIMEZONE });
+  entries.push(...sessionResult.entries);
+  stats.filesScanned += sessionResult.stats.filesScanned;
+  stats.ignoredNoAmount += sessionResult.stats.ignoredMissingCost;
+  
+  // Merge days from session entries
+  for (const entry of sessionResult.entries) {
+    daysSet.add(entry.day);
+  }
+
   const expectedDays = buildExpectedDays(targetMonth, range, now);
   stats.daysProcessed = Array.from(daysSet).sort();
 
@@ -146,6 +168,7 @@ async function loadEntries(monthInput: string | undefined, now: Date): Promise<E
     range,
     month: targetMonth,
     expectedDays,
+    tokenUsage: sessionResult.tokenUsage,
   };
 }
 
@@ -208,8 +231,11 @@ function parseLogLine(line: string, day: string):
 
   const metadata = extractMetadata(rest);
   const category = metadata.category ?? inferCategory(rest);
-  const model = metadata.model ?? detectModel(rest);
+  const rawModel = metadata.model ?? detectModel(rest);
+  const canonicalModel = canonicalizeModelLabel(rawModel);
+  const normalizedModel = canonicalModel.label === "UNSPECIFIED" && !rawModel ? undefined : canonicalModel.label;
   const timestamp = buildTimestamp(day, time);
+  const trimmedRawModel = rawModel?.trim();
 
   return {
     kind: "entry",
@@ -217,7 +243,9 @@ function parseLogLine(line: string, day: string):
       timestamp,
       day,
       agent: (metadata.agent ?? agent).trim(),
-      model: model?.trim(),
+      model: normalizedModel,
+      provider: normalizedModel ? canonicalModel.provider : undefined,
+      rawModel: trimmedRawModel,
       category,
       amount: roundCurrency(amountInfo.amount),
       currency: amountInfo.currency,
@@ -370,6 +398,7 @@ function buildMissionControlMetrics(
   byAgent: ExpenseBreakdownWithShare[],
   byModel: ExpenseBreakdownWithShare[]
 ): ExpenseMissionControlMetrics {
+
   const totalSpent = roundCurrency(result.entries.reduce((sum, entry) => sum + entry.amount, 0));
   const status = resolveBudgetStatus(totalSpent);
   const remaining = roundCurrency(BUDGET_BAHT - totalSpent);
@@ -406,6 +435,68 @@ function buildMissionControlMetrics(
       byModel,
     },
   } as ExpenseMissionControlMetrics;
+}
+
+async function buildOpenRouterActualSummary(result: EntriesResult): Promise<OpenRouterActualSummary> {
+  const trackedThb = roundCurrency(
+    result.entries.reduce((sum, entry) => {
+      const provider = (entry.provider ?? "").toLowerCase();
+      const rawModel = (entry.rawModel ?? "").toLowerCase();
+      if (provider.includes("openrouter") || rawModel.startsWith("openrouter/")) {
+        return sum + entry.amount;
+      }
+      return sum;
+    }, 0)
+  );
+  const trackedUsd = roundCurrency(trackedThb / OPENROUTER_EXCHANGE_RATE);
+  const monthLabel = formatMonthLabel(result.month);
+
+  try {
+    const actual = await getOpenRouterActualSpend();
+    const actualThb = roundCurrency(actual.thbTotal);
+    const actualUsd = roundCurrency(actual.usdTotal);
+    const gapThb = roundCurrency(actualThb - trackedThb);
+    const gapPct = actualThb > 0 ? Math.round((gapThb / actualThb) * 1000) / 10 : 0;
+
+    return {
+      monthLabel,
+      trackedThb,
+      trackedUsd,
+      actualThb,
+      actualUsd,
+      gapThb,
+      gapPct,
+      status: "ok",
+      updatedAt: actual.fetchedAt,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to fetch OpenRouter actual spend";
+    const status = message.includes("OPENROUTER_API_KEY") ? "missing" : "error";
+    return {
+      monthLabel,
+      trackedThb,
+      trackedUsd,
+      actualThb: null,
+      actualUsd: null,
+      gapThb: null,
+      gapPct: null,
+      status,
+      message,
+      updatedAt: null,
+    };
+  }
+}
+
+
+function formatMonthLabel(month: string) {
+  const [yearStr, monthStr] = month.split('-');
+  const year = Number(yearStr);
+  const monthIndex = Number(monthStr) - 1;
+  if (!Number.isFinite(year) || !Number.isFinite(monthIndex)) {
+    return month;
+  }
+  const date = new Date(Date.UTC(year, monthIndex, 1));
+  return MONTH_LABEL_FORMATTER.format(date);
 }
 
 function buildDailyTotals(entries: ExpenseLogEntry[]): { date: string; total: number }[] {
@@ -467,7 +558,24 @@ function getMonthRange(month: string, now: Date) {
   const nextMonthStart = new Date(Date.UTC(year, monthIndex + 1, 1, 0, 0, 0));
   const monthStringForNow = DEFAULT_MONTH_FORMATTER.format(now);
   const isMonthToDate = monthStringForNow === month;
-  const end = isMonthToDate && now < nextMonthStart ? now : nextMonthStart;
+  
+  let end: Date;
+  if (isMonthToDate && now < nextMonthStart) {
+    // Get end of current day in Bangkok timezone (23:59:59.999)
+    const bangkokFormatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: LOG_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const [currentYear, currentMonth, currentDay] = bangkokFormatter.format(now).split('-').map(Number);
+    
+    // Create end of day in UTC (next day 00:00:00 Bangkok = previous day 17:00:00 UTC)
+    const nextDayBangkok = new Date(Date.UTC(currentYear, currentMonth - 1, currentDay + 1, 0, 0, 0));
+    end = new Date(nextDayBangkok.getTime() - 7 * 60 * 60 * 1000); // Subtract 7 hours for Bangkok offset
+  } else {
+    end = nextMonthStart;
+  }
 
   return { start, end, isMonthToDate };
 }

@@ -31,9 +31,9 @@ export default function TodoSection() {
     }
   };
 
-  const handleToggleComplete = async (id: string, completed: boolean) => {
+  const handleToggleComplete = async (id: string, isCompleted: boolean) => {
     try {
-      await updateTodo(id, { completed: !completed });
+      await updateTodo(id, { status: isCompleted ? "pending" : "completed" });
     } catch (err) {
       console.error("Failed to update todo:", err);
     }
@@ -54,8 +54,8 @@ export default function TodoSection() {
     }
   };
 
-  const activeTodos = todos.filter((t) => !t.completed);
-  const completedTodos = todos.filter((t) => t.completed);
+  const activeTodos = todos.filter((t) => t.status !== "completed");
+  const completedTodos = todos.filter((t) => t.status === "completed");
 
   return (
     <div className="border border-border rounded-lg p-4 bg-[#0f0f0f]">
@@ -128,8 +128,8 @@ export default function TodoSection() {
             >
               <input
                 type="checkbox"
-                checked={todo.completed}
-                onChange={() => handleToggleComplete(todo.id, todo.completed)}
+                checked={todo.status === "completed"}
+                onChange={() => handleToggleComplete(todo.id, todo.status === "completed")}
                 className="w-4 h-4 rounded border-gray-600 bg-[#0a0a0a] text-accent-cyan focus:ring-accent-cyan focus:ring-offset-0 cursor-pointer"
               />
               <span className="text-sm flex-1 font-mono">{todo.title}</span>
@@ -159,8 +159,8 @@ export default function TodoSection() {
                 >
                   <input
                     type="checkbox"
-                    checked={todo.completed}
-                    onChange={() => handleToggleComplete(todo.id, todo.completed)}
+                    checked={true}
+                    onChange={() => handleToggleComplete(todo.id, true)}
                     className="w-4 h-4 rounded border-gray-600 bg-[#0a0a0a] text-accent-green focus:ring-accent-green focus:ring-offset-0 cursor-pointer"
                   />
                   <span className="text-sm flex-1 font-mono line-through text-gray-500">

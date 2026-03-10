@@ -41,7 +41,7 @@ function toChartData(points: ExpenseTrendPoint[] = []): ChartDatum[] {
   }));
 }
 
-const TrendTooltip = ({ active, payload }: TooltipProps<ValueType, NameType>) => {
+const TrendTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
   if (!active || !payload || payload.length === 0) return null;
   const data = payload[0]?.payload as ChartDatum | undefined;
   if (!data) return null;

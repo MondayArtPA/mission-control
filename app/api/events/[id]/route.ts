@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import { Event } from "../route";
+import { type Event } from "@/lib/events";
 
 const DATA_FILE = path.join(process.cwd(), "data", "events.json");
 

@@ -2,6 +2,9 @@ import fs from "fs/promises";
 import type { Dirent } from "fs";
 import path from "path";
 
+import { TokenUsageGroup, TokenUsageSummary } from "@/types/expenses";
+import { canonicalizeModelLabel, detectProviderFromModel, estimateUsdCostFromTokens, ProviderName, TokenCounts } from "@/lib/model-pricing";
+
 const SESSION_ROOT = process.env.OPENCLAW_AGENT_DIR ?? path.join(process.env.HOME ?? "", ".openclaw", "agents");
 const SESSION_TIMEZONE = "Asia/Bangkok";
 const USD_TO_THB_RATE = Number(process.env.EXPENSES_USD_TO_THB ?? 33);
@@ -30,6 +33,8 @@ export interface ExpenseLogEntry {
   day: string;
   agent: string;
   model?: string;
+  provider?: string;
+  rawModel?: string;
   category: string;
   amount: number;
   currency: string;
@@ -58,6 +63,7 @@ export interface SessionParserStats {
 export interface SessionParserResult {
   entries: ExpenseLogEntry[];
   stats: SessionParserStats;
+  tokenUsage: TokenUsageSummary;
 }
 
 interface SessionFileInfo {
@@ -71,6 +77,12 @@ interface ParseParams {
   month: string;
   range: { start: Date; end: Date };
   timezone?: string;
+}
+
+interface TokenUsageAccumulator {
+  totals: TokenUsageGroup;
+  byProvider: Map<string, TokenUsageGroup>;
+  byAgent: Map<string, TokenUsageGroup>;
 }
 
 function roundCurrency(value: number): number {
@@ -93,7 +105,8 @@ export async function parseSessionExpenses({ month, range, timezone = SESSION_TI
   const entries: ExpenseLogEntry[] = [];
   let messagesProcessed = 0;
   let ignoredMissingCost = 0;
-
+  const tokenUsageAccumulator = createTokenUsageAccumulator();
+ 
   for (const file of files) {
     let content: string;
     try {
@@ -122,10 +135,14 @@ export async function parseSessionExpenses({ month, range, timezone = SESSION_TI
       messagesProcessed += 1;
       const usage = record.message.usage;
       const costTotal = typeof usage?.cost?.total === "number" ? usage.cost.total : undefined;
-      if (!usage || typeof costTotal !== "number" || costTotal <= 0) {
-        ignoredMissingCost += 1;
-        continue;
-      }
+      const tokenCounts = normalizeTokenCounts(usage);
+      const providerHint = getProviderHint(record);
+      const rawModel = typeof record.message.model === "string" ? record.message.model : undefined;
+      const canonicalModel = canonicalizeModelLabel(rawModel, providerHint);
+      // Preserve original provider if available (e.g., "openrouter") instead of canonical provider
+      const provider = providerHint ?? canonicalModel.provider ?? detectProviderFromModel(rawModel, providerHint);
+
+      accumulateTokenUsage(tokenUsageAccumulator, provider, file.agent, tokenCounts);
 
       const timestampIso = typeof record.timestamp === "string" ? record.timestamp : new Date(record.message.timestamp ?? Date.now()).toISOString();
       const timestamp = new Date(timestampIso);
@@ -137,31 +154,34 @@ export async function parseSessionExpenses({ month, range, timezone = SESSION_TI
         continue;
       }
 
-      const tokens = {
-        input: Number(usage.input ?? usage.promptTokens ?? 0),
-        output: Number(usage.output ?? usage.completionTokens ?? 0),
-        total: typeof usage.totalTokens === "number" ? Number(usage.totalTokens) : 0,
-      };
-
-      if (!tokens.total || Number.isNaN(tokens.total)) {
-        tokens.total = tokens.input + tokens.output;
+      let costUsd = typeof costTotal === "number" ? costTotal : undefined;
+      if ((!costUsd || costUsd <= 0) && canonicalModel.pricing) {
+        const estimated = estimateUsdCostFromTokens(tokenCounts, canonicalModel.pricing);
+        if (typeof estimated === "number" && estimated > 0) {
+          costUsd = estimated;
+        }
       }
 
-      const costUsd = costTotal;
+      if (!usage || !costUsd || costUsd <= 0) {
+        ignoredMissingCost += 1;
+        continue;
+      }
+
       const costThb = roundCurrency(costUsd * USD_TO_THB_RATE);
       const formatter = getDateFormatter(timezone);
       const day = formatter.format(timestamp);
-      const model = String(record.message.model ?? "UNSPECIFIED").trim() || "UNSPECIFIED";
 
       entries.push({
         timestamp: timestamp.toISOString(),
         day,
         agent: file.agent,
-        model,
+        model: canonicalModel.label,
+        provider,
+        rawModel,
         category: ENTRY_CATEGORY,
         amount: costThb,
         currency: "THB",
-        sourceLine: buildSourceLine({ file, record, model, costUsd, costThb }),
+        sourceLine: buildSourceLine({ file, record, model: canonicalModel.label, costUsd, costThb }),
       });
     }
   }
@@ -173,11 +193,100 @@ export async function parseSessionExpenses({ month, range, timezone = SESSION_TI
       messagesProcessed,
       ignoredMissingCost,
     },
+    tokenUsage: finalizeTokenUsage(tokenUsageAccumulator),
   };
 
   sessionCache.set(cacheKey, { signature, result });
 
   return result;
+}
+
+function normalizeTokenCounts(usage: any): TokenCounts {
+  const rawInput = Number(usage?.input ?? usage?.promptTokens ?? 0);
+  const rawOutput = Number(usage?.output ?? usage?.completionTokens ?? 0);
+  const safeInput = Number.isFinite(rawInput) && rawInput > 0 ? rawInput : 0;
+  const safeOutput = Number.isFinite(rawOutput) && rawOutput > 0 ? rawOutput : 0;
+  let total = Number(usage?.totalTokens ?? 0);
+  if (!Number.isFinite(total) || total <= 0) {
+    total = safeInput + safeOutput;
+  }
+  return {
+    input: safeInput,
+    output: safeOutput,
+    total,
+  };
+}
+
+function getProviderHint(record: any): string | undefined {
+  if (typeof record?.message?.provider === "string") {
+    return record.message.provider;
+  }
+  if (typeof record?.message?.metadata?.provider === "string") {
+    return record.message.metadata.provider;
+  }
+  if (typeof record?.provider === "string") {
+    return record.provider;
+  }
+  if (typeof record?.source === "string") {
+    return record.source;
+  }
+  return undefined;
+}
+
+function createTokenUsageAccumulator(): TokenUsageAccumulator {
+  return {
+    totals: { key: "TOTAL", input: 0, output: 0, total: 0 },
+    byProvider: new Map(),
+    byAgent: new Map(),
+  };
+}
+
+function accumulateTokenUsage(acc: TokenUsageAccumulator, provider: ProviderName, agent: string, tokens: TokenCounts) {
+  const hasTokens = tokens.input > 0 || tokens.output > 0 || tokens.total > 0;
+  if (!hasTokens) {
+    return;
+  }
+
+  acc.totals.input += tokens.input;
+  acc.totals.output += tokens.output;
+  acc.totals.total += tokens.total;
+
+  const providerKey = provider ?? "Other";
+  const providerGroup = acc.byProvider.get(providerKey) ?? { key: providerKey, input: 0, output: 0, total: 0 };
+  providerGroup.input += tokens.input;
+  providerGroup.output += tokens.output;
+  providerGroup.total += tokens.total;
+  acc.byProvider.set(providerKey, providerGroup);
+
+  const agentKey = agent?.trim() || "UNSPECIFIED";
+  const agentGroup = acc.byAgent.get(agentKey) ?? { key: agentKey, input: 0, output: 0, total: 0 };
+  agentGroup.input += tokens.input;
+  agentGroup.output += tokens.output;
+  agentGroup.total += tokens.total;
+  acc.byAgent.set(agentKey, agentGroup);
+}
+
+function finalizeTokenUsage(acc: TokenUsageAccumulator): TokenUsageSummary {
+  return {
+    totals: roundTokenUsageGroup(acc.totals),
+    byProvider: mapTokenUsageGroups(acc.byProvider),
+    byAgent: mapTokenUsageGroups(acc.byAgent),
+  };
+}
+
+function mapTokenUsageGroups(collection: Map<string, TokenUsageGroup>): TokenUsageGroup[] {
+  return Array.from(collection.values())
+    .map((group) => roundTokenUsageGroup(group))
+    .sort((a, b) => b.total - a.total || a.key.localeCompare(b.key));
+}
+
+function roundTokenUsageGroup(group: TokenUsageGroup): TokenUsageGroup {
+  return {
+    key: group.key,
+    input: Math.round(group.input),
+    output: Math.round(group.output),
+    total: Math.round(group.total),
+  };
 }
 
 async function listSessionFiles(): Promise<SessionFileInfo[]> {

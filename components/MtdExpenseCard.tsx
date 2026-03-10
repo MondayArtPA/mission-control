@@ -160,13 +160,20 @@ export default function MtdExpenseCard({ summary, month, setMonth }: MtdExpenseC
                 backgroundColor: "#0f0f0f",
                 border: "1px solid rgba(255,255,255,0.08)",
                 borderRadius: "0.75rem",
-                color: "#f3f4f6",
+                color: "#ffffff",
                 fontSize: "0.85rem",
                 fontFamily: "'Space Mono', 'DM Mono', monospace",
               }}
-              formatter={(value: number) => {
-                const usdValue = value / USD_EXCHANGE_RATE;
-                return [`${formatTHB(value)} (${formatUSD(usdValue)})`, "Spend"];
+              labelStyle={{
+                color: "#ffffff",
+              }}
+              itemStyle={{
+                color: "#ffffff",
+              }}
+              formatter={(value) => {
+                const numVal = typeof value === "number" ? value : Number(value) || 0;
+                const usdValue = numVal / USD_EXCHANGE_RATE;
+                return [`${formatTHB(numVal)} (${formatUSD(usdValue)})`, "Spend"] as [string, string];
               }}
               labelFormatter={(label) => `Day ${label}`}
             />

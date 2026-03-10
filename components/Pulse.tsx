@@ -180,7 +180,7 @@ export default function Pulse() {
 
           <Link
             href="/expenses"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-accent-cyan/40 bg-accent-cyan/10 px-4 py-2 text-sm font-semibold text-accent-cyan transition hover:border-accent-cyan hover:bg-accent-cyan/20"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-accent-cyan/40 bg-accent-cyan/10 px-4 py-2 text-sm font-semibold text-accent-cyan transition hover:border-accent-cyan hover:bg-accent-cyan/20"
           >
             Open expense dashboard
           </Link>
