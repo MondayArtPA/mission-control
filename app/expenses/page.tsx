@@ -36,7 +36,7 @@ const buildYearMonths = (year: number) =>
 
 const clampYear = (year: number) => Math.max(2026, Math.min(2030, year));
 
-const getYearlyBudget = (year: number) => (year === 2026 ? 5000 * 10 : 5000 * 12);
+const getYearlyBudget = (year: number) => (year === 2026 ? 7000 * 10 : 7000 * 12);
 
 const getYearStartMonth = (year: number) => (year === 2026 ? 3 : 1);
 
@@ -250,7 +250,7 @@ export default function ExpensesPage() {
   const usagePct = yearlyBudget > 0 ? (ytdTotal / yearlyBudget) * 100 : 0;
   const ytdStatus = getUsageStatus(usagePct);
 
-  const monthlyBudget = 5000;
+  const monthlyBudget = 7000;
   const actualSpent = expensesHook.summary?.totalExpense ?? 0;
 
   const lastUpdated = useMemo(() => {
@@ -364,7 +364,7 @@ export default function ExpensesPage() {
                       interval={0}
                       padding={{ left: 20, right: 20 }}
                     />
-                    <YAxis hide width={48} domain={[0, (dataMax: number) => Math.max(5000, dataMax) * 1.15]} />
+                    <YAxis hide width={48} domain={[0, (dataMax: number) => Math.max(7000, dataMax) * 1.15]} />
                     <RechartsTooltip
                       cursor={{ fill: "rgba(52, 211, 153, 0.08)" }}
                       contentStyle={{
@@ -402,7 +402,7 @@ export default function ExpensesPage() {
                       ))}
                     </Bar>
                     <ReferenceLine
-                      y={5000}
+                      y={7000}
                       stroke="#f59e0b"
                       strokeWidth={2}
                       strokeOpacity={0.95}

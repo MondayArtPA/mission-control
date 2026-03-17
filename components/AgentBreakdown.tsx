@@ -25,11 +25,33 @@ const THB = new Intl.NumberFormat("th-TH", {
   maximumFractionDigits: 2,
 });
 
-const AGENT_COLORS: Record<string, string> = {
-  MONDAY: "#22d3ee",
-  BLUEPRINT: "#a855f7",
-  QUANT: "#34d399",
+const AGENT_ALIAS_MAP: Record<string, string> = {
+  MONDAY: "Monday",
+  MAIN: "Monday",
+  BLUEPRINT: "Blueprint",
+  QUANT: "Quant",
+  PIXAR: "Pixar",
+  SWISS: "Swiss",
 };
+
+const AGENT_COLORS: Record<string, string> = {
+  Monday: "#22d3ee",
+  Blueprint: "#a855f7",
+  Quant: "#34d399",
+  Pixar: "#facc15",
+  Swiss: "#f472b6",
+};
+
+const DEFAULT_AGENT_COLOR = "#f472b6";
+
+function normalizeAgentName(key?: string | null) {
+  if (!key) return "Unknown";
+  const trimmed = key.trim();
+  if (!trimmed) return "Unknown";
+  const alias = AGENT_ALIAS_MAP[trimmed.toUpperCase()];
+  if (alias) return alias;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+}
 
 interface AgentBreakdownProps {
   summary: ExpenseSummaryApiPayload | null;
@@ -58,20 +80,39 @@ export default function AgentBreakdown({ summary, loading }: AgentBreakdownProps
   const metricsBreakdown = summary?.metrics?.breakdown.byAgent ?? [];
   const fallback = summary?.breakdown.byAgent ?? [];
   const source = metricsBreakdown.length ? metricsBreakdown : fallback;
-  const total = source.reduce((sum, item) => sum + item.total, 0) || summary?.totalExpense || 0;
+  const aggregated = new Map<string, ChartDatum>();
 
-  const data: ChartDatum[] = source.map((item) => ({
-    ...item,
-    name: item.key,
-    percent: (item as ExpenseBreakdownWithShare).percent ?? (total > 0 ? (item.total / total) * 100 : 0),
-  }));
+  source.forEach((item) => {
+    const name = normalizeAgentName(item.key);
+    const existing = aggregated.get(name);
+    if (existing) {
+      existing.total += item.total;
+      existing.count = (existing.count ?? 0) + (item.count ?? 0);
+    } else {
+      aggregated.set(name, {
+        ...item,
+        key: name,
+        name,
+        total: item.total,
+        percent: 0,
+      });
+    }
+  });
+
+  const combinedTotal = Array.from(aggregated.values()).reduce((sum, item) => sum + item.total, 0);
+  const data: ChartDatum[] = Array.from(aggregated.values())
+    .map((item) => ({
+      ...item,
+      percent: combinedTotal > 0 ? (item.total / combinedTotal) * 100 : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
 
   return (
     <section className="rounded-2xl border border-border bg-[#0d0d0d] p-4 sm:p-6">
       <div className="mb-4">
         <p className="text-xs font-mono uppercase tracking-[0.28em] text-gray-500">Agents</p>
         <h2 className="text-lg font-semibold text-foreground">Breakdown by agent</h2>
-        <p className="text-sm text-gray-500">Comparing MONDAY, BLUEPRINT, QUANT spend share.</p>
+        <p className="text-sm text-gray-500">Combined view of each agent's spend share (aliases merged).</p>
       </div>
       <div className="h-56 sm:h-64">
         {loading ? (
@@ -92,7 +133,7 @@ export default function AgentBreakdown({ summary, loading }: AgentBreakdownProps
               <Tooltip content={<BreakdownTooltip />} cursor={{ fill: "#111", opacity: 0.1 }} />
               <Bar dataKey="total" radius={[6, 6, 0, 0]}>
                 {data.map((entry) => (
-                  <Cell key={entry.key} fill={AGENT_COLORS[entry.key] ?? "#f472b6"} />
+                  <Cell key={entry.key} fill={AGENT_COLORS[entry.key] ?? DEFAULT_AGENT_COLOR} />
                 ))}
               </Bar>
             </BarChart>
@@ -106,7 +147,7 @@ export default function AgentBreakdown({ summary, loading }: AgentBreakdownProps
               <div className="flex items-center gap-2">
                 <span
                   className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: AGENT_COLORS[item.key] ?? "#f472b6" }}
+                  style={{ backgroundColor: AGENT_COLORS[item.key] ?? DEFAULT_AGENT_COLOR }}
                 />
                 {item.name}
               </div>

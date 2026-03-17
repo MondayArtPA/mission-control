@@ -29,3 +29,7 @@ export interface KnowledgeSearchFilters {
   prefix?: KnowledgePrefix;
   updatedBy?: string;
 }
+
+export interface KnowledgeSearchResult extends KnowledgeSummary {
+  snippet: string;
+}

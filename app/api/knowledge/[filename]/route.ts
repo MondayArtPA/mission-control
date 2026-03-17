@@ -7,9 +7,10 @@ const buildFilename = (raw: string | string[]) => {
   return decodeURIComponent(value ?? "");
 };
 
-export async function GET(_request: NextRequest, { params }: { params: { filename: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
   try {
-    const filename = buildFilename(params.filename);
+    const { filename: rawFilename } = await params;
+    const filename = buildFilename(rawFilename);
     const record = await getKnowledgeFile(filename);
     return NextResponse.json({ success: true, data: record });
   } catch (error) {
@@ -18,9 +19,10 @@ export async function GET(_request: NextRequest, { params }: { params: { filenam
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { filename: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
   try {
-    const filename = buildFilename(params.filename);
+    const { filename: rawFilename } = await params;
+    const filename = buildFilename(rawFilename);
     const body = await request.json();
     const { content, metadata, verifyAfterDays, verifyAfterDate, approved } = body ?? {};
 
@@ -48,9 +50,10 @@ export async function PUT(request: NextRequest, { params }: { params: { filename
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { filename: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
   try {
-    const filename = buildFilename(params.filename);
+    const { filename: rawFilename } = await params;
+    const filename = buildFilename(rawFilename);
     await softDeleteKnowledgeFile(filename);
     return NextResponse.json({ success: true });
   } catch (error) {

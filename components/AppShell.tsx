@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, ArrowUpRight, BookOpen, DollarSign, HeartPulse, Menu, PanelLeft, Sparkles, X } from "lucide-react";
+import { Activity, ArrowUpRight, BookOpen, DollarSign, HeartPulse, Menu, PanelLeft, Radio, Sparkles, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
@@ -19,6 +19,12 @@ const NAVIGATION: NavigationItem[] = [
     label: "Command Center",
     description: "Home — agent overview & quick routing",
     icon: Sparkles,
+  },
+  {
+    href: "/bus",
+    label: "Shared Bus",
+    description: "Agent messaging, knowledge & delegations",
+    icon: Radio,
   },
   {
     href: "/knowledge",

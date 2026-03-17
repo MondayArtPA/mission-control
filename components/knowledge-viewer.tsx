@@ -43,7 +43,8 @@ export default function KnowledgeViewer({ filename, content, metadata }: Knowled
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight]}
           components={{
-            code({ node, inline, className, children, ...props }) {
+            code({ node, className, children, ...props }: any) {
+              const inline = !className;
               if (inline) {
                 return (
                   <code className="rounded bg-white/10 px-1 py-0.5 text-[12px] text-emerald-200" {...props}>

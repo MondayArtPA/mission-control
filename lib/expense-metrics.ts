@@ -20,9 +20,9 @@ const LOG_TIMEZONE = "Asia/Bangkok";
 const LOG_DIR = process.env.EXPENSE_LOG_DIR ?? path.join(process.env.HOME ?? "", ".openclaw", "logs");
 const LOG_FILE_REGEX = /^\d{4}-\d{2}-\d{2}\.md$/;
 const MONTH_INPUT_REGEX = /^\d{4}-\d{2}$/;
-const BUDGET_BAHT = 5000;
-const ALERT_THRESHOLD = 4250; // 85% of budget
-const RESTRICT_THRESHOLD = 4750; // 95% of budget
+const BUDGET_BAHT = 7000;
+const ALERT_THRESHOLD = 5950; // 85% of budget
+const RESTRICT_THRESHOLD = 6650; // 95% of budget
 const DEFAULT_MONTH_FORMATTER = new Intl.DateTimeFormat("en-CA", { timeZone: LOG_TIMEZONE, year: "numeric", month: "2-digit" });
 const DEFAULT_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: LOG_TIMEZONE,

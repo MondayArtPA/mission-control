@@ -53,6 +53,43 @@ export default function CommandCenterHome() {
     return { overview, tasks: agentTasks };
   }, [selectedAgent, agents, tasks]);
 
+  const summary = useMemo(() => {
+    const today = new Date();
+    const isSameDay = (value?: string | null) => {
+      if (!value) return false;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return false;
+      return (
+        date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate()
+      );
+    };
+
+    let inProgress = 0;
+    let queued = 0;
+    let completedToday = 0;
+
+    tasks.forEach((task) => {
+      if (task.status === "in_progress") inProgress += 1;
+      if (task.status === "new" || task.status === "queued") queued += 1;
+      if (task.status === "completed" && isSameDay(task.completedAt)) completedToday += 1;
+    });
+
+    return { inProgress, queued, completedToday };
+  }, [tasks]);
+
+  const [todayLabel, setTodayLabel] = useState("");
+  useEffect(() => {
+    setTodayLabel(
+      new Date().toLocaleDateString("th-TH", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })
+    );
+  }, []);
+
   const handleLoadMore = () => {
     setActivityLimit((prev) => prev + 10);
   };
@@ -69,6 +106,37 @@ export default function CommandCenterHome() {
             <div>
               <div className="text-xs uppercase tracking-[0.3em] text-accent-cyan">Agent Overview</div>
               <p className="text-sm text-gray-400">8 agent + SYSTEM พร้อมสถานะ real-time</p>
+            </div>
+          </div>
+          <div className="mt-6 rounded-3xl border border-border/60 bg-[#0b111a] p-5 shadow-[0_0_30px_rgba(0,0,0,0.35)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-[0.32em] text-accent-magenta/80">Today's overview</div>
+                <p className="text-sm text-gray-400">สถานะงานวันนี้ · {todayLabel}</p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-border/70 bg-[#0f1723] p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-gray-400">In Progress</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-mono font-bold text-accent-cyan">{summary.inProgress}</span>
+                  <span className="text-sm text-gray-500">tasks</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-[#120f18] p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-gray-400">In Queue</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-mono font-bold text-accent-amber">{summary.queued}</span>
+                  <span className="text-sm text-gray-500">waiting</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-[#101a17] p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-gray-400">Completed (วันนี้)</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-mono font-bold text-accent-green">{summary.completedToday}</span>
+                  <span className="text-sm text-gray-500">done</span>
+                </div>
+              </div>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

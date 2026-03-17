@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAgentDetailSnapshot, isValidAgent } from "@/lib/agent-status";
 
-export async function GET(_: Request, { params }: { params: { name: string } }) {
+type RouteContext = {
+  params: Promise<{ name: string }>;
+};
+
+export async function GET(_: Request, context: RouteContext) {
   try {
-    if (!params?.name || !isValidAgent(params.name)) {
+    const { name } = await context.params;
+    if (!name || !isValidAgent(name)) {
       return NextResponse.json({ success: false, error: "Invalid agent" }, { status: 400 });
     }
-    const snapshot = await getAgentDetailSnapshot(params.name);
+    const snapshot = await getAgentDetailSnapshot(name);
     return NextResponse.json({ success: true, data: snapshot });
   } catch (error) {
     return NextResponse.json(

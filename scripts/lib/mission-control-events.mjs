@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = process.env.MISSION_CONTROL_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const DEFAULT_BASE_URL = process.env.MISSION_CONTROL_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export function resolveBaseUrl(baseUrl = DEFAULT_BASE_URL) {
   return String(baseUrl).replace(/\/$/, "");

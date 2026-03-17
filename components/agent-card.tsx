@@ -32,6 +32,19 @@ export default function AgentCard({ agent, onSelect, isSelected }: AgentCardProp
         <span>Model {agent.model}</span>
         <span>Session {agent.sessionTime}</span>
       </div>
+      <div
+        className={`mt-3 inline-flex rounded-full border px-3 py-1 text-[11px] ${
+          agent.dispatchStatus === "failed"
+            ? "border-red-500/40 text-red-300"
+            : agent.dispatchStatus === "pending"
+              ? "border-amber-500/40 text-amber-200"
+              : agent.dispatchStatus === "sent"
+                ? "border-emerald-500/40 text-emerald-200"
+                : "border-border/50 text-gray-400"
+        }`}
+      >
+        {agent.dispatchStatusLabel}
+      </div>
     </button>
   );
 }

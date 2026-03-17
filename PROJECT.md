@@ -256,7 +256,7 @@ npm run build
 npm start
 ```
 
-**Dev Server:** `http://localhost:3000` (or 3001 if 3000 in use)
+**Dev Server:** `http://localhost:3002` (งดใช้ 3001 — ถ้า 3002 ชนให้เลือกพอร์ตอื่นที่ไม่ใช่ 3001)
 
 ## Key Implementation Details
 

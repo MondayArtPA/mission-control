@@ -4,9 +4,10 @@ import { useMemo } from "react";
 
 import StatusBadge from "@/components/StatusBadge";
 import {
+  Bar,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -22,6 +23,8 @@ const USD_EXCHANGE_RATE = 33;
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_START_YEAR = 2026;
 const MONTH_END_YEAR = 2030;
+const SYSTEM_START_DATE = new Date("2026-03-09T00:00:00Z");
+const DAY_IN_MS = 86400000;
 
 const formatTHB = (value: number) =>
   `฿${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -47,15 +50,19 @@ interface ChartPoint {
   projected: number | null;
 }
 
-interface ProjectionPoint {
-  day: number;
-  value: number;
-}
-
 interface ProjectionResult {
   valuesByDay: Map<number, number>;
   projectedEom: number;
   lastActualDay: number;
+}
+
+interface OperatingWindow {
+  effectiveStartDate: Date;
+  operatingStartDay: number;
+  totalOperatingDays: number;
+  daysElapsed: number;
+  observationEndDate: Date;
+  monthEndDate: Date;
 }
 
 const ChartTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
@@ -107,6 +114,15 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
   const projectionPct = budget > 0 ? (projectedEom / budget) * 100 : 0;
 
   const yAxisMax = Math.max(axisMax, budget, alertLine, restrictLine) * 1.05 || budget * 1.1;
+  const dailyAxisMax = useMemo(() => {
+    if (!chartData.length) {
+      return 1;
+    }
+    const peak = chartData.reduce((maxValue, point) => {
+      return Math.max(maxValue, point.actual ?? 0);
+    }, 0);
+    return peak > 0 ? peak * 1.3 : 1;
+  }, [chartData]);
   const showSkeleton = loading && !summary;
 
   return (
@@ -157,7 +173,7 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 10, right: 24, left: 0, bottom: 6 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 24, left: 0, bottom: 6 }}>
               <CartesianGrid stroke="#1f1f1f" strokeDasharray="3 3" />
               <XAxis
                 dataKey="label"
@@ -168,6 +184,17 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
                 minTickGap={12}
               />
               <YAxis
+                yAxisId="daily"
+                stroke="#4b5563"
+                tickLine={false}
+                fontSize={11}
+                width={40}
+                domain={[0, Math.max(dailyAxisMax, 1)]}
+                tickFormatter={(value) => `${Math.round(Number(value))}`}
+              />
+              <YAxis
+                yAxisId="total"
+                orientation="right"
                 stroke="#666"
                 tickLine={false}
                 fontSize={11}
@@ -177,33 +204,22 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
               />
               <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#2a2a2a" }} />
               <ReferenceLine
-                y={alertLine}
-                stroke="#facc15"
-                strokeDasharray="4 4"
-                label={{ value: "Alt", fill: "#facc15", position: "right", fontSize: 9 }}
-              />
-              <ReferenceLine
-                y={restrictLine}
-                stroke="#fb923c"
-                strokeDasharray="4 4"
-                label={{ value: "Rst", fill: "#fb923c", position: "right", fontSize: 9 }}
-              />
-              <ReferenceLine
+                yAxisId="total"
                 y={budget}
                 stroke="#f87171"
                 strokeDasharray="2 6"
-                label={{ value: "Bdgt", fill: "#f87171", position: "right", fontSize: 9 }}
+                label={{ value: "Monthly Budget", fill: "#f87171", position: "right", fontSize: 10 }}
               />
-              <Line
-                type="monotone"
+              <Bar
+                yAxisId="daily"
                 dataKey="actual"
                 name="Daily Actual"
-                stroke="#38bdf8"
-                strokeWidth={2}
-                dot={{ r: 3, stroke: "#0f0f0f", strokeWidth: 1 }}
-                connectNulls={false}
+                fill="#38bdf8"
+                radius={[3, 3, 0, 0]}
+                maxBarSize={18}
               />
               <Line
+                yAxisId="total"
                 type="monotone"
                 dataKey="accumulated"
                 name="Accumulated"
@@ -213,6 +229,7 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
                 activeDot={{ r: 4 }}
               />
               <Line
+                yAxisId="total"
                 type="monotone"
                 dataKey="projected"
                 name="Projected"
@@ -222,7 +239,7 @@ export default function ProgressGuardrailsCard({ summary, loading, month, setMon
                 dot={false}
                 connectNulls
               />
-            </LineChart>
+            </ComposedChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -287,13 +304,20 @@ function buildChartData(summary: ExpenseSummaryApiPayload | null) {
   const year = Number(yearStr);
   const month = Number(monthStr);
   if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
-    return { chartData: [] as ChartPoint[], projectedEom: summary.metrics?.totals?.spent ?? 0, axisMax: summary.metrics?.totals?.spent ?? 0 };
+    const fallback = summary.metrics?.totals?.spent ?? 0;
+    return { chartData: [] as ChartPoint[], projectedEom: fallback, axisMax: fallback };
   }
 
   const totalDays = new Date(year, month, 0).getDate();
   const today = new Date();
   const isCurrentMonth = summary.isMonthToDate && today.getFullYear() === year && today.getMonth() + 1 === month;
-  const daysElapsed = isCurrentMonth ? Math.min(today.getDate(), totalDays) : totalDays;
+
+  const operatingWindow = computeOperatingWindow({
+    year,
+    month,
+    totalDays,
+    isCurrentMonth,
+  });
 
   const totalsMap = new Map(summary.metrics?.trend?.daily?.map((point) => [point.date, point.total]) ?? []);
   const chartPoints: ChartPoint[] = [];
@@ -301,7 +325,17 @@ function buildChartData(summary: ExpenseSummaryApiPayload | null) {
 
   for (let day = 1; day <= totalDays; day++) {
     const date = `${yearStr}-${monthStr}-${String(day).padStart(2, "0")}`;
-    const withinObservedWindow = day <= daysElapsed;
+    const currentDate = new Date(year, month - 1, day);
+
+    const withinOperatingWindow =
+      operatingWindow.totalOperatingDays > 0 &&
+      currentDate >= operatingWindow.effectiveStartDate &&
+      currentDate <= operatingWindow.monthEndDate;
+    const withinObservedWindow =
+      withinOperatingWindow &&
+      currentDate <= operatingWindow.observationEndDate &&
+      operatingWindow.daysElapsed > 0;
+
     let actualValue: number | null = null;
     if (withinObservedWindow) {
       actualValue = roundCurrency(totalsMap.get(date) ?? 0);
@@ -318,22 +352,18 @@ function buildChartData(summary: ExpenseSummaryApiPayload | null) {
     });
   }
 
-  const actualPoints: ProjectionPoint[] = chartPoints
-    .filter((point) => point.accumulated !== null)
-    .map((point) => ({ day: point.day, value: point.accumulated as number }));
+  const projection = buildProjection(
+    chartPoints,
+    operatingWindow.daysElapsed,
+    operatingWindow.totalOperatingDays,
+    operatingWindow.operatingStartDay,
+    totalDays
+  );
 
-  const projection = buildProjection(actualPoints, totalDays);
-
-  const chartData = chartPoints.map((point) => {
-    let projectedValue: number | null = null;
-    if (projection.lastActualDay > 0 && point.day >= projection.lastActualDay) {
-      projectedValue = projection.valuesByDay.get(point.day) ?? null;
-    }
-    return {
-      ...point,
-      projected: projectedValue,
-    };
-  });
+  const chartData = chartPoints.map((point) => ({
+    ...point,
+    projected: projection.valuesByDay.get(point.day) ?? null,
+  }));
 
   const axisMax = chartData.reduce((max, point) => {
     return Math.max(max, point.accumulated ?? 0, point.projected ?? 0, point.actual ?? 0);
@@ -346,64 +376,50 @@ function buildChartData(summary: ExpenseSummaryApiPayload | null) {
   };
 }
 
-function buildProjection(points: ProjectionPoint[], totalDays: number): ProjectionResult {
-  if (points.length === 0) {
+function buildProjection(
+  points: ChartPoint[],
+  daysElapsed: number,
+  totalOperatingDays: number,
+  operatingStartDay: number,
+  totalDaysInMonth: number
+): ProjectionResult {
+  if (points.length === 0 || totalOperatingDays <= 0) {
     return { valuesByDay: new Map(), projectedEom: 0, lastActualDay: 0 };
   }
 
-  const lastPoint = points[points.length - 1];
-
-  let slope = 0;
-  let intercept = 0;
-
-  if (points.length === 1) {
-    const safeDay = Math.max(lastPoint.day, 1);
-    slope = safeDay > 0 ? lastPoint.value / safeDay : 0;
-    intercept = 0;
-  } else {
-    const n = points.length;
-    const sumX = points.reduce((sum, p) => sum + p.day, 0);
-    const sumY = points.reduce((sum, p) => sum + p.value, 0);
-    const sumXY = points.reduce((sum, p) => sum + p.day * p.value, 0);
-    const sumXX = points.reduce((sum, p) => sum + p.day * p.day, 0);
-    const denominator = n * sumXX - sumX * sumX;
-
-    if (denominator === 0) {
-      slope = lastPoint.value / Math.max(lastPoint.day, 1);
-      intercept = 0;
-    } else {
-      slope = (n * sumXY - sumX * sumY) / denominator;
-      intercept = (sumY - slope * sumX) / n;
+  const clampedElapsed = Math.max(Math.min(daysElapsed, totalOperatingDays), 0);
+  let lastObservedPoint: ChartPoint | null = null;
+  for (let i = points.length - 1; i >= 0; i--) {
+    if (points[i]?.accumulated !== null) {
+      lastObservedPoint = points[i];
+      break;
     }
   }
 
-  if (!Number.isFinite(slope)) {
-    slope = 0;
-  }
-  slope = Math.max(0, slope);
-
-  if (!Number.isFinite(intercept)) {
-    intercept = 0;
-  }
-
+  const mtdActual = lastObservedPoint?.accumulated ?? 0;
+  const dailyAverage = clampedElapsed > 0 ? mtdActual / clampedElapsed : 0;
   const valuesByDay = new Map<number, number>();
-  let previous = lastPoint.value;
 
-  for (let day = lastPoint.day; day <= totalDays; day++) {
-    let projectedValue = day === lastPoint.day ? lastPoint.value : intercept + slope * day;
-    if (!Number.isFinite(projectedValue)) {
-      projectedValue = previous;
+  if (lastObservedPoint) {
+    for (let day = lastObservedPoint.day; day <= totalDaysInMonth; day++) {
+      const offset = day - lastObservedPoint.day;
+      const projectedValue = offset === 0 ? mtdActual : roundCurrency(mtdActual + dailyAverage * offset);
+      valuesByDay.set(day, projectedValue);
     }
-    projectedValue = Math.max(projectedValue, previous);
-    projectedValue = roundCurrency(projectedValue);
-    valuesByDay.set(day, projectedValue);
-    previous = projectedValue;
+  } else {
+    for (let day = operatingStartDay; day <= totalDaysInMonth; day++) {
+      const offset = day - operatingStartDay + 1;
+      const projectedValue = roundCurrency(dailyAverage * offset);
+      valuesByDay.set(day, projectedValue);
+    }
   }
+
+  const projectedEom = roundCurrency(dailyAverage * totalOperatingDays);
 
   return {
     valuesByDay,
-    projectedEom: valuesByDay.get(totalDays) ?? lastPoint.value,
-    lastActualDay: lastPoint.day,
+    projectedEom,
+    lastActualDay: lastObservedPoint?.day ?? 0,
   };
 }
 
@@ -443,4 +459,65 @@ function buildMonthOptions(currentValue: string) {
     }
   }
   return options;
+}
+
+function computeOperatingWindow({
+  year,
+  month,
+  totalDays,
+  isCurrentMonth,
+}: {
+  year: number;
+  month: number;
+  totalDays: number;
+  isCurrentMonth: boolean;
+}): OperatingWindow {
+  const monthIndex = month - 1;
+  const monthStart = new Date(year, monthIndex, 1);
+  const monthEndDate = new Date(year, monthIndex, totalDays);
+  const today = startOfDay(new Date());
+  const systemStart = startOfDay(SYSTEM_START_DATE);
+
+  const baseStart = systemStart > monthStart ? systemStart : monthStart;
+  if (baseStart > monthEndDate) {
+    const futureStart = startOfDay(baseStart);
+    return {
+      effectiveStartDate: futureStart,
+      operatingStartDay: totalDays + 1,
+      totalOperatingDays: 0,
+      daysElapsed: 0,
+      observationEndDate: futureStart,
+      monthEndDate,
+    };
+  }
+
+  const effectiveStartDate = startOfDay(baseStart);
+  const operatingStartDay =
+    effectiveStartDate.getFullYear() === year && effectiveStartDate.getMonth() === monthIndex
+      ? effectiveStartDate.getDate()
+      : 1;
+
+  const totalOperatingDays = Math.max(totalDays - operatingStartDay + 1, 0);
+  const observationCap = isCurrentMonth ? today : today < monthEndDate ? today : monthEndDate;
+  const observationEndDate = observationCap > monthEndDate ? monthEndDate : observationCap;
+
+  let daysElapsed = 0;
+  if (totalOperatingDays > 0 && observationEndDate >= effectiveStartDate) {
+    const diff = startOfDay(observationEndDate).getTime() - effectiveStartDate.getTime();
+    daysElapsed = Math.floor(diff / DAY_IN_MS) + 1;
+    daysElapsed = Math.min(Math.max(daysElapsed, 0), totalOperatingDays);
+  }
+
+  return {
+    effectiveStartDate,
+    operatingStartDay,
+    totalOperatingDays,
+    daysElapsed,
+    observationEndDate,
+    monthEndDate,
+  };
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

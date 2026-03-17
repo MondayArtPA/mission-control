@@ -17,6 +17,7 @@ const config: Config = {
           magenta: "#ff00ff",
           green: "#00ff00",
           amber: "#ffbf00",
+          purple: "#d946ef",
         },
       },
       fontFamily: {

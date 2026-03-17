@@ -32,10 +32,17 @@ function formatRelativeTime(iso?: string | null): string {
   return `${days} วันที่แล้ว`;
 }
 
-function determineStatus(inProgress: number, queued: number): { status: AgentOverview["status"]; emoji: string } {
-  if (inProgress > 0 && queued > 0) return { status: "busy", emoji: "🟠" };
-  if (inProgress > 0) return { status: "active", emoji: "🟢" };
-  if (queued > 0) return { status: "busy", emoji: "🟠" };
+function determineStatus(
+  inProgress: number,
+  queued: number,
+  pendingReview: number,
+  blocked: number
+): { status: AgentOverview["status"]; emoji: string } {
+  const active = inProgress + pendingReview;
+  const waiting = queued + blocked;
+  if (active > 0 && waiting > 0) return { status: "busy", emoji: "🟠" };
+  if (active > 0) return { status: "active", emoji: "🟢" };
+  if (waiting > 0) return { status: "busy", emoji: "🟠" };
   return { status: "idle", emoji: "⚪" };
 }
 
@@ -78,12 +85,47 @@ export async function getAgentOverviews(): Promise<AgentOverview[]> {
 
   return AGENT_LIST.map((profile) => {
     const agentTasks = grouped[profile.id] ?? [];
-    const { inProgress, queued, completed } = bucketizeTasks(agentTasks);
-    const { status, emoji } = determineStatus(inProgress.length, queued.length);
-    const currentTask = inProgress[0]?.title ?? queued[0]?.title ?? "ยังไม่มี task";
+    const { inProgress, queued, pendingReview, blocked, completed } = bucketizeTasks(agentTasks);
+    const { status, emoji } = determineStatus(
+      inProgress.length,
+      queued.length,
+      pendingReview.length,
+      blocked.length
+    );
+    const currentTask =
+      inProgress[0]?.title ??
+      pendingReview[0]?.title ??
+      blocked[0]?.title ??
+      queued[0]?.title ??
+      "ยังไม่มี task";
 
-    const sessionTime = inProgress[0]?.startedAt ? formatDurationSince(inProgress[0].startedAt) : "—";
+    const sessionTime = inProgress[0]?.startedAt
+      ? formatDurationSince(inProgress[0].startedAt)
+      : pendingReview[0]?.startedAt
+        ? formatDurationSince(pendingReview[0].startedAt)
+        : "—";
     const lastActive = completed[0]?.completedAt ? formatRelativeTime(completed[0].completedAt) : "ยังไม่เคยทำ";
+
+    const dispatchPendingCount = queued.filter((task) => !task.dispatched).length;
+    const dispatchFailedCount = queued.filter((task) => Boolean(task.dispatchError)).length;
+    const lastDispatchAt = agentTasks
+      .map((task) => task.dispatchedAt)
+      .filter((value): value is string => typeof value === "string" && Boolean(value))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+
+    let dispatchStatus: AgentOverview["dispatchStatus"] = "idle";
+    let dispatchStatusLabel = "—";
+
+    if (dispatchFailedCount > 0) {
+      dispatchStatus = "failed";
+      dispatchStatusLabel = `⚠️ Dispatch failed (${dispatchFailedCount})`;
+    } else if (dispatchPendingCount > 0) {
+      dispatchStatus = "pending";
+      dispatchStatusLabel = `⌛ Waiting dispatch (${dispatchPendingCount})`;
+    } else if (queued.length + inProgress.length + pendingReview.length + blocked.length > 0) {
+      dispatchStatus = "sent";
+      dispatchStatusLabel = lastDispatchAt ? `📤 Sent ${formatRelativeTime(lastDispatchAt)}` : "📤 Sent";
+    }
 
     return {
       id: profile.id,
@@ -92,11 +134,18 @@ export async function getAgentOverviews(): Promise<AgentOverview[]> {
       status,
       statusEmoji: emoji,
       currentTask,
-      queueCount: queued.length + inProgress.length,
+      queueCount: queued.length + inProgress.length + pendingReview.length + blocked.length,
       model: profile.defaultModel,
       sessionTime,
       lastActive,
-      priorityLoad: countPriorities(agentTasks.filter((task) => task.status !== "completed" && task.status !== "cancelled")),
+      priorityLoad: countPriorities(
+        agentTasks.filter((task) => task.status !== "completed" && task.status !== "cancelled")
+      ),
+      dispatchStatus,
+      dispatchStatusLabel,
+      dispatchPendingCount,
+      dispatchFailedCount,
+      lastDispatchAt,
     } satisfies AgentOverview;
   });
 }

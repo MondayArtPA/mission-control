@@ -34,7 +34,7 @@ export default function ActivityFeed({ events, agents, onLoadMore, loading }: Ac
         {events.map((event) => (
           <div key={event.id} className="rounded-2xl border border-border/60 bg-[#0f141b] p-3">
             <div className="flex flex-wrap items-center justify-between text-[11px] text-gray-500">
-              <span>{new Date(event.timestamp).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}</span>
+              <span suppressHydrationWarning>{new Date(event.timestamp).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}</span>
               <span className="font-semibold text-gray-300">{resolveSourceLabel(event, agents)}</span>
             </div>
             <p className="mt-2 text-sm text-white">{event.message}</p>

@@ -6,6 +6,7 @@ export type AgentName =
   | "pixar"
   | "hubble"
   | "marcus"
+  | "trueone"
   | "system";
 
 export interface AgentProfile {
@@ -82,6 +83,15 @@ export const AGENT_DIRECTORY: Record<AgentName, AgentProfile> = {
     defaultModel: "opus-mini",
     description: "Mind/body OS & counsel",
   },
+  trueone: {
+    id: "trueone",
+    label: "TRUEONE",
+    codename: "Telco",
+    icon: "📱",
+    role: "True Corp ops & data",
+    defaultModel: "sonnet-4.6",
+    description: "True Corp domain — PIE reports, retailer data",
+  },
   system: {
     id: "system",
     label: "SYSTEM",
@@ -115,6 +125,11 @@ export interface AgentOverview {
     p3: number;
     p4: number;
   };
+  dispatchStatus: "sent" | "pending" | "failed" | "idle";
+  dispatchStatusLabel: string;
+  dispatchPendingCount: number;
+  dispatchFailedCount: number;
+  lastDispatchAt?: string | null;
 }
 
 export type PriorityLevel = "CRITICAL" | "P1" | "P2" | "P3" | "P4";
@@ -159,7 +174,22 @@ export const PRIORITY_META: Record<PriorityLevel, { label: string; short: string
   },
 };
 
-export type TaskStatus = "queued" | "in_progress" | "completed" | "cancelled";
+export type TaskStatus =
+  | "new"
+  | "queued"
+  | "in_progress"
+  | "pending_review"
+  | "blocked"
+  | "parked"
+  | "completed"
+  | "cancelled"
+  | "aborted";
+
+export interface TaskTokenUsage {
+  input: number;
+  output: number;
+  total: number;
+}
 
 export interface TaskRecord {
   id: string;
@@ -174,13 +204,24 @@ export interface TaskRecord {
   completedAt?: string | null;
   resultSummary?: string | null;
   attachments?: string[];
+  dispatched: boolean;
+  dispatchedAt?: string | null;
+  dispatchMessageId?: number | null;
+  dispatchError?: string | null;
+  autoComplete?: boolean;
+  reviewMessageId?: string | number | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  tokenUsage?: TaskTokenUsage | null;
+  estimatedCostThb?: number | null;
+  modelUsed?: string | null;
 }
 
 export interface ActivityEvent {
   id: string;
   timestamp: string;
   source: AgentName | "art";
-  type: "task_created" | "task_updated" | "task_completed" | "status" | "note";
+  type: "task_created" | "task_updated" | "task_completed" | "task_dispatched" | "dispatch_failed" | "agent_triggered" | "trigger_failed" | "status" | "note";
   message: string;
   priority?: PriorityLevel;
 }

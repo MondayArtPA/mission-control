@@ -7,6 +7,8 @@ module.exports = {
       args: "dev -p 3001",
       env: {
         NODE_ENV: "development",
+        PORT: "3001",
+        MISSION_CONTROL_BASE_URL: "http://localhost:3001",
       },
       watch: false,
       autorestart: true,
